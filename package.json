@@ -1,0 +1,36 @@
+{
+  "name": "local-agent",
+  "version": "1.0.0",
+  "description": "A lightweight background service that monitors designated folders on your office machines, detects incoming tender and business documents, and securely uploads them to the cloud processing platform — with zero manual intervention.",
+  "main": "dist/agent.js",
+  "scripts": {
+    "dev": "tsx src/agent.ts",
+    "build": "tsc",
+    "start": "node dist/agent.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Amritbhardwajgsv/local-filewatcher-agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Amritbhardwajgsv/local-filewatcher-agent/issues"
+  },
+  "homepage": "https://github.com/Amritbhardwajgsv/local-filewatcher-agent#readme",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "dotenv": "^17.4.2",
+    "js-yaml": "^4.2.0",
+    "winston": "^3.17.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}

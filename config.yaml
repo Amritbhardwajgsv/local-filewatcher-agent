@@ -1,0 +1,24 @@
+agent:
+  id: "local-agent-01"
+  heartbeat_interval_seconds: 60
+  log_level: "info"
+
+watched_folders:
+  - path: "./watched"
+    label: "Local documents"
+    priority: 1
+
+validation:
+  max_file_size_mb: 100
+  allowed_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".xlsx"
+    - ".txt"
+  stability_check_interval_ms: 500
+  stability_check_count: 3
+
+logging:
+  dir: "./logs"
+  max_files: "14d"
+  max_size: "20m"
