@@ -26,6 +26,7 @@ const ConfigSchema = z.object({
   validation: z.object({
     max_file_size_mb: z.number().int().min(1).max(500).default(100),
     allowed_extensions: z.array(z.string().startsWith('.')).min(1),
+    rejected_folder: z.string().min(1).default('./rejected'),
     stability_check_interval_ms: z.number().int().min(100).default(500),
     stability_check_count: z.number().int().min(2).default(3),
   }),
