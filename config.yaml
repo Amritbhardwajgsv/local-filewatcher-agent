@@ -13,8 +13,7 @@ validation:
   allowed_extensions:
     - ".pdf"
     - ".docx"
-    - ".xlsx"
-    - ".txt"
+    - ".doc"
   stability_check_interval_ms: 500
   stability_check_count: 3
 
