@@ -14,6 +14,7 @@ validation:
     - ".pdf"
     - ".docx"
     - ".doc"
+  rejected_folder: "./rejected"
   stability_check_interval_ms: 500
   stability_check_count: 3
 

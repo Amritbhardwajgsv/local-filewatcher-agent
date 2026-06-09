@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { AgentConfig } from './config';
 import { getLogger } from './logger';
-import { showinvalidfilewarning } from './notification';
+import {
+  showFileSizeWarning,
+  showinvalidfilewarning,
+} from './notification';
 export interface DetectedFile {
   filename: string;
   fullPath: string;
@@ -102,6 +105,39 @@ if (!allowedExtensions.includes(extension)) {
   return;
 }
 
+const maxFileSizeBytes =
+  this.config.validation.max_file_size_mb * 1024 * 1024;
+
+if (sizeBytes > maxFileSizeBytes) {
+  const filename = path.basename(filePath);
+
+  showFileSizeWarning(
+    filename,
+    this.config.validation.max_file_size_mb,
+  );
+
+  try {
+    const rejectedPath = this.moveToRejected(filePath);
+
+    logger.warn(`Oversized file moved to rejected folder: ${filename}`, {
+      event: 'file_too_large',
+      file: filename,
+      size_bytes: sizeBytes,
+      max_size_mb: this.config.validation.max_file_size_mb,
+      rejected_path: rejectedPath,
+    });
+  } catch (error) {
+    logger.error(`Could not move oversized file: ${filename}`, {
+      event: 'file_rejection_failed',
+      file: filename,
+      path: filePath,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return;
+}
+
 // Valid files reach this point.
 const detected: DetectedFile = {
   filename: path.basename(filePath),
@@ -115,7 +151,9 @@ this.onFileDetected(detected);
     }
 
   private moveToRejected(filePath: string): string {
-    const rejectedDirectory = path.resolve('./rejected');
+    const rejectedDirectory = path.resolve(
+      this.config.validation.rejected_folder,
+    );
     fs.mkdirSync(rejectedDirectory, { recursive: true });
 
     const parsedPath = path.parse(filePath);
