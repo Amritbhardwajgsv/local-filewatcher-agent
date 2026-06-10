@@ -4,3 +4,4 @@ logs/
 watched/
 rejected/
 .env
+data/
