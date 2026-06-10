@@ -1,6 +1,9 @@
 import { loadConfig } from './config';
 import { createLogger, getLogger } from './logger';
 import { FolderWatcher, type DetectedFile } from './watcher';
+import {UploadQueue} from './queue';
+
+const uploadQueue = new UploadQueue();
 
 function main(): void {
   let loadedConfig: ReturnType<typeof loadConfig>;
@@ -32,6 +35,7 @@ function main(): void {
       file: file.filename,
       size_mb: (file.sizeBytes / (1024 * 1024)).toFixed(2),
     });
+    uploadQueue.addJob(file.filename, file.fullPath, file.sizeBytes);
   }
 
   const watcher = new FolderWatcher(config, onFileDetected);
@@ -47,6 +51,7 @@ function main(): void {
       event: 'agent_shutdown',
       signal,
     });
+    uploadQueue.close();
     watcher.stop();
     process.exit(0);
   }
