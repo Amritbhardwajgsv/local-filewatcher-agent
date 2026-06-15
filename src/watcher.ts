@@ -16,139 +16,199 @@ export interface DetectedFile {
 
 export type OnFileDetected = (file: DetectedFile) => void;
 
-
-// now we  need the class from scratch from scratch everything with proper reasoning you are best in explainaing 
 export class FolderWatcher {
   private watcher: FSWatcher | null = null;
   private readonly config: AgentConfig;
   private readonly onFileDetected: OnFileDetected;
+  private stopped = true;
 
   constructor(config: AgentConfig, onFileDetected: OnFileDetected) {
     this.config = config;
     this.onFileDetected = onFileDetected;
   }
-start(): void {
-  const logger = getLogger();
 
-  const folderPaths = this.config.watched_folders.map((folder) =>
-    path.resolve(folder.path),
-  );
+  start(): void {
+    const logger = getLogger();
+    this.stopped = false;
 
-  for (const folderPath of folderPaths) {
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath, { recursive: true });
+    const folderPaths = this.config.watched_folders.map((folder) =>
+      path.resolve(folder.path),
+    );
 
-      logger.info(`Created missing folder: ${folderPath}`, {
-        event: 'folder_created',
-        folder: folderPath,
-      });
+    for (const folderPath of folderPaths) {
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+
+        logger.info(`Created missing folder: ${folderPath}`, {
+          event: 'folder_created',
+          folder: folderPath,
+        });
+      }
     }
-  }
-  this.watcher = watch(folderPaths, {
-    persistent: true,
-    ignoreInitial: true,
-  });
 
-  this.watcher.on('add', (filePath) => {
-    this.handleFileAdded(filePath);
-  });
-}
+    this.watcher = watch(folderPaths, {
+      persistent: true,
+      ignoreInitial: true,
+    });
+
+    this.watcher.on('add', (filePath) => {
+      void this.handleFileAdded(filePath);
+    });
+  }
+
   stop(): void {
+    this.stopped = true;
+
     if (this.watcher) {
-      this.watcher.close();
+      void this.watcher.close();
       this.watcher = null;
     }
+
     getLogger().info('Stopped folder watcher', { event: 'watcher_stopped' });
   }
-  private handleFileAdded(filePath: string): void {
-    const logger = getLogger();
-    let sizeBytes: number;
+
+  private async waitForFileStability(
+    filePath: string,
+  ): Promise<fs.Stats | undefined> {
+    const {
+      stability_check_interval_ms: intervalMs,
+      stability_check_count: requiredChecks,
+    } = this.config.validation;
+
+    let previousStats: fs.Stats;
+
     try {
-      sizeBytes = fs.statSync(filePath).size;
+      previousStats = fs.statSync(filePath);
     } catch {
-      logger.warn('Could not read file', {
-        event: 'stat_failed',
-        file: filePath,
+      return undefined;
+    }
+
+    let stableChecks = 0;
+
+    while (!this.stopped && stableChecks < requiredChecks) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, intervalMs);
       });
+
+      if (this.stopped) {
+        return undefined;
+      }
+
+      let currentStats: fs.Stats;
+
+      try {
+        currentStats = fs.statSync(filePath);
+      } catch {
+        return undefined;
+      }
+
+      const unchanged =
+        currentStats.size === previousStats.size &&
+        currentStats.mtimeMs === previousStats.mtimeMs;
+
+      if (unchanged) {
+        stableChecks += 1;
+      } else {
+        stableChecks = 0;
+        previousStats = currentStats;
+      }
+    }
+
+    return previousStats;
+  }
+
+  private async handleFileAdded(filePath: string): Promise<void> {
+    const logger = getLogger();
+
+    const stableStats = await this.waitForFileStability(filePath);
+
+    if (!stableStats) {
+      if (!this.stopped) {
+        logger.warn('File disappeared before becoming stable', {
+          event: 'file_stability_failed',
+          file: filePath,
+        });
+      }
+
       return;
-    } 
+    }
+
+    const sizeBytes = stableStats.size;
     const extension = path.extname(filePath).toLowerCase();
 
-const allowedExtensions =
-  this.config.validation.allowed_extensions.map((item) =>
-    item.toLowerCase(),
-  );
+    const allowedExtensions =
+      this.config.validation.allowed_extensions.map((item) =>
+        item.toLowerCase(),
+      );
 
-if (!allowedExtensions.includes(extension)) {
-  const filename = path.basename(filePath);
+    if (!allowedExtensions.includes(extension)) {
+      const filename = path.basename(filePath);
 
-  showinvalidfilewarning(filename, allowedExtensions);
+      showinvalidfilewarning(filename, allowedExtensions);
 
-  try {
-    const rejectedPath = this.moveToRejected(filePath);
+      try {
+        const rejectedPath = this.moveToRejected(filePath);
 
-    logger.warn(`Unsupported file moved to rejected folder: ${filename}`, {
-      event: 'file_rejected',
-      file: filename,
-      extension,
-      rejected_path: rejectedPath,
-    });
-  } catch (error) {
-    logger.error(`Could not move unsupported file: ${filename}`, {
-      event: 'file_rejection_failed',
-      file: filename,
-      path: filePath,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
+        logger.warn(`Unsupported file moved to rejected folder: ${filename}`, {
+          event: 'file_rejected',
+          file: filename,
+          extension,
+          rejected_path: rejectedPath,
+        });
+      } catch (error) {
+        logger.error(`Could not move unsupported file: ${filename}`, {
+          event: 'file_rejection_failed',
+          file: filename,
+          path: filePath,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
 
-  return;
-}
-
-const maxFileSizeBytes =
-  this.config.validation.max_file_size_mb * 1024 * 1024;
-
-if (sizeBytes > maxFileSizeBytes) {
-  const filename = path.basename(filePath);
-
-  showFileSizeWarning(
-    filename,
-    this.config.validation.max_file_size_mb,
-  );
-
-  try {
-    const rejectedPath = this.moveToRejected(filePath);
-
-    logger.warn(`Oversized file moved to rejected folder: ${filename}`, {
-      event: 'file_too_large',
-      file: filename,
-      size_bytes: sizeBytes,
-      max_size_mb: this.config.validation.max_file_size_mb,
-      rejected_path: rejectedPath,
-    });
-  } catch (error) {
-    logger.error(`Could not move oversized file: ${filename}`, {
-      event: 'file_rejection_failed',
-      file: filename,
-      path: filePath,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  return;
-}
-
-// Valid files reach this point.
-const detected: DetectedFile = {
-  filename: path.basename(filePath),
-  fullPath: filePath,
-  sizeBytes,
-  detectedAt: new Date(),
-};
-
-this.onFileDetected(detected);
-      
+      return;
     }
+
+    const maxFileSizeBytes =
+      this.config.validation.max_file_size_mb * 1024 * 1024;
+
+    if (sizeBytes > maxFileSizeBytes) {
+      const filename = path.basename(filePath);
+
+      showFileSizeWarning(
+        filename,
+        this.config.validation.max_file_size_mb,
+      );
+
+      try {
+        const rejectedPath = this.moveToRejected(filePath);
+
+        logger.warn(`Oversized file moved to rejected folder: ${filename}`, {
+          event: 'file_too_large',
+          file: filename,
+          size_bytes: sizeBytes,
+          max_size_mb: this.config.validation.max_file_size_mb,
+          rejected_path: rejectedPath,
+        });
+      } catch (error) {
+        logger.error(`Could not move oversized file: ${filename}`, {
+          event: 'file_rejection_failed',
+          file: filename,
+          path: filePath,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      return;
+    }
+
+    const detected: DetectedFile = {
+      filename: path.basename(filePath),
+      fullPath: filePath,
+      sizeBytes,
+      detectedAt: new Date(),
+    };
+
+    this.onFileDetected(detected);
+  }
 
   private moveToRejected(filePath: string): string {
     const rejectedDirectory = path.resolve(

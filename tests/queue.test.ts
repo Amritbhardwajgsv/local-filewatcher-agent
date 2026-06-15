@@ -19,6 +19,9 @@ interface UploadJobRow {
   retry_count: number;
   last_error: string | null;
   created_at: string;
+  detected_at: string | null;
+  next_attempt_at: string | null;
+  completed_at: string | null;
 }
 
 describe('UploadQueue', () => {
@@ -85,7 +88,10 @@ describe('UploadQueue', () => {
           status,
           retry_count,
           last_error,
-          created_at
+          created_at,
+          detected_at,
+          next_attempt_at,
+          completed_at
         FROM upload_jobs
       `)
       .get() as UploadJobRow;
@@ -98,8 +104,13 @@ describe('UploadQueue', () => {
       status: 'pending',
       retry_count: 0,
       last_error: null,
+      completed_at: null,
     });
     expect(new Date(job.created_at).toString()).not.toBe('Invalid Date');
+    expect(new Date(job.detected_at ?? '').toString()).not.toBe('Invalid Date');
+    expect(new Date(job.next_attempt_at ?? '').toString()).not.toBe(
+      'Invalid Date',
+    );
   });
 
   it('returns the oldest pending upload job', () => {
@@ -144,6 +155,186 @@ describe('UploadQueue', () => {
     expect(queue.getNextPendingJob()).toBeUndefined();
     expect(queue.markCompleted(1)).toBe(true);
     expect(queue.markCompleted(1)).toBe(false);
+  });
+
+  it('claims the next due job and marks it uploading atomically', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+    queue.addJob('report.pdf', 'C:\\files\\report.pdf', 2048);
+
+    expect(queue.claimNextPendingJob()).toMatchObject({
+      id: 1,
+      status: 'uploading',
+    });
+    expect(queue.claimNextPendingJob()).toBeUndefined();
+  });
+
+  it('does not return a retry until its next attempt is due', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+    queue.addJob('report.pdf', 'C:\\files\\report.pdf', 2048);
+    expect(queue.markUploading(1)).toBe(true);
+
+    const retryAt = new Date('2030-01-01T00:00:30.000Z');
+    expect(
+      queue.scheduleRetry(1, 'Server unavailable', retryAt),
+    ).toBe(true);
+
+    expect(
+      queue.getNextPendingJob(new Date('2030-01-01T00:00:29.999Z')),
+    ).toBeUndefined();
+    expect(queue.getNextPendingJob(retryAt)).toMatchObject({
+      id: 1,
+      status: 'pending',
+      retryCount: 1,
+      lastError: 'Server unavailable',
+      nextAttemptAt: retryAt.toISOString(),
+    });
+  });
+
+  it('returns a blocked job when its retry time is due', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+    queue.addJob('report.pdf', 'C:\\files\\report.pdf', 2048);
+    queue.markUploading(1);
+
+    const retryAt = new Date('2030-01-01T00:05:00.000Z');
+    expect(queue.scheduleBlocked(1, 'Forbidden', retryAt)).toBe(true);
+    expect(
+      queue.getNextPendingJob(new Date('2030-01-01T00:04:59.999Z')),
+    ).toBeUndefined();
+    expect(queue.getNextPendingJob(retryAt)).toMatchObject({
+      id: 1,
+      status: 'blocked',
+      retryCount: 1,
+      lastError: 'Forbidden',
+    });
+    expect(queue.claimNextPendingJob(retryAt)).toMatchObject({
+      id: 1,
+      status: 'uploading',
+    });
+  });
+
+  it('recovers previously failed authorization jobs as blocked', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    const databasePath = path.join(temporaryFolder, 'agent.db');
+    const database = new Database(databasePath);
+    database.exec(`
+      CREATE TABLE upload_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      INSERT INTO upload_jobs (
+        filename,
+        file_path,
+        size_bytes,
+        status,
+        retry_count,
+        last_error,
+        created_at
+      )
+      VALUES (
+        'blocked.pdf',
+        'C:\\files\\blocked.pdf',
+        100,
+        'failed',
+        1,
+        'Upload request failed with HTTP 403',
+        '2026-06-15T00:00:00.000Z'
+      );
+    `);
+    database.close();
+
+    queue = new UploadQueue(databasePath);
+
+    expect(queue.getJob(1)).toMatchObject({
+      status: 'blocked',
+      retryCount: 1,
+    });
+  });
+
+  it('recovers interrupted uploading jobs after restart', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+    queue.addJob('report.pdf', 'C:\\files\\report.pdf', 2048);
+    queue.markUploading(1);
+
+    const recoveredAt = new Date('2030-01-01T00:00:00.000Z');
+    expect(queue.recoverInterruptedJobs(recoveredAt)).toBe(1);
+    expect(queue.getNextPendingJob(recoveredAt)).toMatchObject({
+      id: 1,
+      status: 'pending',
+      lastError: 'Upload interrupted before completion',
+      nextAttemptAt: recoveredAt.toISOString(),
+    });
+  });
+
+  it('migrates an existing queue without losing its jobs', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    const databasePath = path.join(temporaryFolder, 'agent.db');
+    const database = new Database(databasePath);
+    database.exec(`
+      CREATE TABLE upload_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      INSERT INTO upload_jobs (
+        filename,
+        file_path,
+        size_bytes,
+        created_at
+      )
+      VALUES (
+        'existing.pdf',
+        'C:\\files\\existing.pdf',
+        100,
+        '2026-06-15T00:00:00.000Z'
+      );
+    `);
+    database.close();
+
+    queue = new UploadQueue(databasePath);
+
+    expect(
+      queue.getNextPendingJob(new Date('2026-06-15T00:00:01.000Z')),
+    ).toMatchObject({
+      id: 1,
+      filename: 'existing.pdf',
+      detectedAt: '2026-06-15T00:00:00.000Z',
+      nextAttemptAt: '2026-06-15T00:00:00.000Z',
+    });
   });
 
   it('records a failed upload and increments its retry count', () => {

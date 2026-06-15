@@ -24,7 +24,18 @@ export function createLogger(config: AgentConfig): winston.Logger {
         format: winston.format.combine(
           winston.format.colorize(),
           winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-          winston.format.printf(({ timestamp, level, message, event, file }) => {
+          winston.format.printf((info) => {
+            const {
+              timestamp,
+              level,
+              message,
+              event,
+              file,
+              error,
+              status_code: statusCode,
+              attempt,
+              job_id: jobId,
+            } = info;
             let line = `[${timestamp}] [${level}] ${message}`;
 
             if (event) {
@@ -33,6 +44,22 @@ export function createLogger(config: AgentConfig): winston.Logger {
 
             if (file) {
               line += ` | file: ${String(file)}`;
+            }
+
+            if (jobId !== undefined) {
+              line += ` | job: ${String(jobId)}`;
+            }
+
+            if (attempt !== undefined) {
+              line += ` | attempt: ${String(attempt)}`;
+            }
+
+            if (statusCode !== undefined) {
+              line += ` | status: ${String(statusCode)}`;
+            }
+
+            if (error) {
+              line += ` | error: ${String(error)}`;
             }
 
             return line;

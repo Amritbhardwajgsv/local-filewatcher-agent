@@ -1,11 +1,11 @@
 agent:
-  id: "local-agent-01"
+  id: "__AGENT_ID__"
   heartbeat_interval_seconds: 60
   log_level: "info"
 
 watched_folders:
-  - path: "./watched"
-    label: "Local documents"
+  - path: "C:/Users/Public/Documents/Tender Uploads"
+    label: "Tender documents"
     priority: 1
 
 validation:
@@ -14,7 +14,7 @@ validation:
     - ".pdf"
     - ".docx"
     - ".doc"
-  rejected_folder: "./rejected"
+  rejected_folder: "C:/ProgramData/TenderAgent/rejected"
   stability_check_interval_ms: 500
   stability_check_count: 3
 
@@ -27,6 +27,6 @@ upload:
   worker_poll_interval_ms: 1000
 
 logging:
-  dir: "./logs"
+  dir: "C:/ProgramData/TenderAgent/logs"
   max_files: "14d"
   max_size: "20m"

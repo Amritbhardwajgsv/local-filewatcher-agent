@@ -1,15 +1,20 @@
 import { loadConfig } from './config';
 import { createLogger, getLogger } from './logger';
 import { FolderWatcher, type DetectedFile } from './watcher';
-import {UploadQueue} from './queue';
-
-const uploadQueue = new UploadQueue();
+import { UploadQueue } from './queue';
+import { FileUploader } from './uploader';
+import { UploadWorker } from './upload-worker';
+import { getRuntimePaths } from './runtime';
 
 function main(): void {
   let loadedConfig: ReturnType<typeof loadConfig>;
+  const runtimePaths = getRuntimePaths();
 
   try {
-    loadedConfig = loadConfig('./config.yaml');
+    loadedConfig = loadConfig(
+      runtimePaths.configPath,
+      runtimePaths.envPath,
+    );
   } catch (error) {
     console.error(
       '[FATAL] Failed to load config:',
@@ -20,6 +25,13 @@ function main(): void {
 
   const { config, secrets } = loadedConfig;
   const logger = createLogger(config);
+  const uploadQueue = new UploadQueue(runtimePaths.databasePath);
+  const uploader = new FileUploader(config, secrets, uploadQueue);
+  const uploadWorker = new UploadWorker(
+    uploadQueue,
+    uploader,
+    config.upload,
+  );
 
   logger.info('Tender agent starting', {
     event: 'agent_start',
@@ -27,6 +39,7 @@ function main(): void {
     version: '1.0.0',
     node_version: process.version,
     platform: process.platform,
+    runtime_home: runtimePaths.homeDir,
   });
 
   function onFileDetected(file: DetectedFile): void {
@@ -35,10 +48,17 @@ function main(): void {
       file: file.filename,
       size_mb: (file.sizeBytes / (1024 * 1024)).toFixed(2),
     });
-    uploadQueue.addJob(file.filename, file.fullPath, file.sizeBytes);
+    uploadQueue.addJob(
+      file.filename,
+      file.fullPath,
+      file.sizeBytes,
+      file.detectedAt,
+    );
+    uploadWorker.wake();
   }
 
   const watcher = new FolderWatcher(config, onFileDetected);
+  uploadWorker.start();
   watcher.start();
 
   logger.info('Agent is running - waiting for documents', {
@@ -46,18 +66,30 @@ function main(): void {
     watching: config.watched_folders.map((folder) => folder.path),
   });
 
-  function shutdown(signal: string): void {
+  let shuttingDown = false;
+
+  async function shutdown(signal: string): Promise<void> {
+    if (shuttingDown) {
+      return;
+    }
+
+    shuttingDown = true;
     getLogger().info(`Received ${signal} - shutting down`, {
       event: 'agent_shutdown',
       signal,
     });
-    uploadQueue.close();
     watcher.stop();
+    await uploadWorker.stop();
+    uploadQueue.close();
     process.exit(0);
   }
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
 
   process.on('uncaughtException', (error) => {
     getLogger().error('Uncaught exception', {
