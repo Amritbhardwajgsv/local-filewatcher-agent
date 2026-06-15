@@ -30,6 +30,21 @@ const ConfigSchema = z.object({
     stability_check_interval_ms: z.number().int().min(100).default(500),
     stability_check_count: z.number().int().min(2).default(3),
   }),
+  upload: z
+    .object({
+      request_timeout_ms: z.number().int().min(1000).default(60_000),
+      max_attempts: z.number().int().min(1).default(5),
+      initial_retry_delay_ms: z.number().int().min(100).default(5_000),
+      max_retry_delay_ms: z.number().int().min(1000).default(300_000),
+      worker_poll_interval_ms: z.number().int().min(100).default(1_000),
+    })
+    .default({
+      request_timeout_ms: 60_000,
+      max_attempts: 5,
+      initial_retry_delay_ms: 5_000,
+      max_retry_delay_ms: 300_000,
+      worker_poll_interval_ms: 1_000,
+    }),
   logging: z.object({
     dir: z.string().min(1).default('./logs'),
     max_files: z.string().min(1).default('14d'),

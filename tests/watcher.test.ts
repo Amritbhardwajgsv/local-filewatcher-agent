@@ -94,6 +94,68 @@ describe('FolderWatcher', () => {
     );
   });
 
+  it('waits for a file to stop changing before accepting it', async () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'watcher-test-'),
+    );
+
+    const config: AgentConfig = {
+      agent: {
+        id: 'test-agent',
+        heartbeat_interval_seconds: 60,
+        log_level: 'error',
+      },
+      watched_folders: [
+        {
+          path: temporaryFolder,
+          label: 'Test folder',
+          priority: 1,
+        },
+      ],
+      validation: {
+        max_file_size_mb: 100,
+        allowed_extensions: ['.pdf'],
+        rejected_folder: path.join(temporaryFolder, 'rejected'),
+        stability_check_interval_ms: 100,
+        stability_check_count: 2,
+      },
+      logging: {
+        dir: temporaryFolder,
+        max_files: '1d',
+        max_size: '1m',
+      },
+    };
+
+    createLogger(config);
+
+    const onFileDetected = vi.fn();
+    watcher = new FolderWatcher(config, onFileDetected);
+    watcher.start();
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const pdfPath = path.join(temporaryFolder, 'growing.pdf');
+    fs.writeFileSync(pdfPath, 'first part');
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    fs.appendFileSync(pdfPath, ' and second part');
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(onFileDetected).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => {
+      expect(onFileDetected).toHaveBeenCalledOnce();
+    });
+
+    expect(onFileDetected).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: 'growing.pdf',
+        fullPath: pdfPath,
+        sizeBytes: fs.statSync(pdfPath).size,
+      }),
+    );
+  });
+
   it('moves an unsupported PNG file to the rejected folder', async () => {
     temporaryFolder = fs.mkdtempSync(
       path.join(os.tmpdir(), 'watcher-test-'),

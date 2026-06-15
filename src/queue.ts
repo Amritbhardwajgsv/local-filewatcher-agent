@@ -17,6 +17,9 @@ export interface UploadJob {
   retryCount: number;
   lastError: string | null;
   createdAt: string;
+  detectedAt: string;
+  nextAttemptAt: string;
+  completedAt: string | null;
 }
 
 export class UploadQueue {
@@ -40,35 +43,47 @@ export class UploadQueue {
         status TEXT NOT NULL DEFAULT 'pending',
         retry_count INTEGER NOT NULL DEFAULT 0,
         last_error TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        detected_at TEXT,
+        next_attempt_at TEXT,
+        completed_at TEXT
       )
     `);
+
+    this.migrateSchema();
   }
 
   addJob(
     filename: string,
     filePath: string,
     sizeBytes: number,
+    detectedAt = new Date(),
   ): void {
+    const createdAt = new Date().toISOString();
+
     this.db
       .prepare(`
         INSERT INTO upload_jobs (
           filename,
           file_path,
           size_bytes,
-          created_at
+          created_at,
+          detected_at,
+          next_attempt_at
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
       `)
       .run(
         filename,
         filePath,
         sizeBytes,
-        new Date().toISOString(),
+        createdAt,
+        detectedAt.toISOString(),
+        createdAt,
       );
   }
 
-  getNextPendingJob(): UploadJob | undefined {
+  getNextPendingJob(now = new Date()): UploadJob | undefined {
     return this.db
       .prepare(`
         SELECT
@@ -79,20 +94,44 @@ export class UploadQueue {
           status,
           retry_count AS retryCount,
           last_error AS lastError,
-          created_at AS createdAt
+          created_at AS createdAt,
+          COALESCE(detected_at, created_at) AS detectedAt,
+          COALESCE(next_attempt_at, created_at) AS nextAttemptAt,
+          completed_at AS completedAt
         FROM upload_jobs
         WHERE status = 'pending'
-        ORDER BY id ASC
+          AND COALESCE(next_attempt_at, created_at) <= ?
+        ORDER BY COALESCE(next_attempt_at, created_at) ASC, id ASC
         LIMIT 1
       `)
-      .get() as UploadJob | undefined;
+      .get(now.toISOString()) as UploadJob | undefined;
+  }
+
+  claimNextPendingJob(now = new Date()): UploadJob | undefined {
+    const claim = this.db.transaction((claimTime: Date) => {
+      const job = this.getNextPendingJob(claimTime);
+
+      if (!job || !this.markUploading(job.id)) {
+        return undefined;
+      }
+
+      return {
+        ...job,
+        status: 'uploading' as const,
+        lastError: null,
+      };
+    });
+
+    return claim(now);
   }
 
   markUploading(id: number): boolean {
     const result = this.db
       .prepare(`
         UPDATE upload_jobs
-        SET status = 'uploading', last_error = NULL
+        SET
+          status = 'uploading',
+          last_error = NULL
         WHERE id = ? AND status = 'pending'
       `)
       .run(id);
@@ -104,10 +143,33 @@ export class UploadQueue {
     const result = this.db
       .prepare(`
         UPDATE upload_jobs
-        SET status = 'completed', last_error = NULL
+        SET
+          status = 'completed',
+          last_error = NULL,
+          completed_at = ?
         WHERE id = ? AND status = 'uploading'
       `)
-      .run(id);
+      .run(new Date().toISOString(), id);
+
+    return result.changes === 1;
+  }
+
+  scheduleRetry(
+    id: number,
+    error: string,
+    nextAttemptAt: Date,
+  ): boolean {
+    const result = this.db
+      .prepare(`
+        UPDATE upload_jobs
+        SET
+          status = 'pending',
+          retry_count = retry_count + 1,
+          last_error = ?,
+          next_attempt_at = ?
+        WHERE id = ? AND status = 'uploading'
+      `)
+      .run(error, nextAttemptAt.toISOString(), id);
 
     return result.changes === 1;
   }
@@ -127,7 +189,57 @@ export class UploadQueue {
     return result.changes === 1;
   }
 
+  recoverInterruptedJobs(now = new Date()): number {
+    const result = this.db
+      .prepare(`
+        UPDATE upload_jobs
+        SET
+          status = 'pending',
+          last_error = 'Upload interrupted before completion',
+          next_attempt_at = ?
+        WHERE status = 'uploading'
+      `)
+      .run(now.toISOString());
+
+    return result.changes;
+  }
+
   close(): void {
     this.db.close();
+  }
+
+  private migrateSchema(): void {
+    const columns = this.db
+      .prepare('PRAGMA table_info(upload_jobs)')
+      .all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+
+    const migrations = [
+      {
+        name: 'detected_at',
+        sql: 'ALTER TABLE upload_jobs ADD COLUMN detected_at TEXT',
+      },
+      {
+        name: 'next_attempt_at',
+        sql: 'ALTER TABLE upload_jobs ADD COLUMN next_attempt_at TEXT',
+      },
+      {
+        name: 'completed_at',
+        sql: 'ALTER TABLE upload_jobs ADD COLUMN completed_at TEXT',
+      },
+    ];
+
+    for (const migration of migrations) {
+      if (!columnNames.has(migration.name)) {
+        this.db.exec(migration.sql);
+      }
+    }
+
+    this.db.exec(`
+      UPDATE upload_jobs
+      SET
+        detected_at = COALESCE(detected_at, created_at),
+        next_attempt_at = COALESCE(next_attempt_at, created_at)
+    `);
   }
 }
