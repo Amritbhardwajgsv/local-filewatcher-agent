@@ -1,100 +1,162 @@
-# Tender Agent — Local Document Ingestion Agent
+# Tender Agent
 
-A lightweight background service that monitors designated folders on your office machines, detects incoming tender and business documents, and securely uploads them to the cloud processing platform — with zero manual intervention.
+A Windows background service that watches a shared folder, validates tender
+documents, queues them locally, and uploads them directly to Amazon S3 using
+resumable multipart uploads.
 
----
+The end user only needs to drop a file into the **Upload Tender Documents**
+desktop folder. No terminal, AWS account, or manual upload step is required.
 
-## How it works
+## How It Works
 
-The agent runs silently as a Windows Service (or Linux daemon) on any machine that has access to your document folders. The moment a file is dropped into a watched folder, the agent validates it, records it to a local queue, and uploads it to the cloud platform. If the upload fails due to a network issue, it retries automatically with backoff. Every action is logged locally with a full audit trail.
-
-```
-Watched folder → Detect → Validate → Queue (SQLite) → Upload → Cloud platform
-```
-
----
-
-## Project structure
-
-```
-tender-agent/
-├── src/
-│   ├── agent.ts          # Entry point — bootstraps all modules
-│   ├── watcher.ts        # Phase 1: folder watcher (chokidar)
-│   ├── validator.ts      # Phase 2: stability check + file validation
-│   ├── queue.ts          # Phase 3: SQLite job queue
-│   ├── uploader.ts       # Phase 4: HTTPS uploader with retry
-│   ├── orchestrator.ts   # Phase 5: config, heartbeat, shutdown
-│   ├── logger.ts         # Winston logger (JSON, rotating)
-│   └── config.ts         # Config loader + Zod schema validation
-├── config.yaml           # Agent configuration (see below)
-├── .env                  # Secrets — never commit this
-├── .env.example          # Template for .env
-├── .gitignore
-├── package.json
-├── tsconfig.json
-└── README.md
+```text
+User drops document
+  -> file stability check
+  -> extension and size validation
+  -> durable SQLite queue
+  -> backend creates multipart upload session
+  -> agent uploads chunks directly to S3 with presigned URLs
+  -> backend completes the upload
 ```
 
----
+The backend never receives the document bytes. It authenticates each machine,
+creates S3 multipart sessions, and issues short-lived presigned URLs.
 
-## Prerequisites
+## Features
 
-- Node.js 20 LTS
-- npm 9+
+- Watches one or more folders with Chokidar.
+- Waits until a copied file stops changing before processing it.
+- Accepts PDF, DOC, and DOCX files up to the configured size limit.
+- Moves invalid or oversized files into a rejected folder.
+- Stores all upload jobs and multipart progress in SQLite.
+- Uploads file chunks directly to S3 using presigned URLs.
+- Saves every uploaded part's ETag for restart-safe resume.
+- Retries network, timeout, rate-limit, and server failures with backoff.
+- Keeps authorization/configuration failures in a durable `blocked` state.
+- Runs automatically as a Windows service through WinSW.
+- Uses a unique, independently revocable API key for each machine.
+- Includes structured JSON logs and automated tests.
 
-> When shipped as a `.exe`, no prerequisites are needed on the target machine.
+## Queue States
 
----
+| State | Meaning |
+|---|---|
+| `pending` | Waiting for the background worker |
+| `uploading` | Currently initiating, uploading, or completing |
+| `blocked` | Waiting for authentication or configuration recovery |
+| `completed` | Successfully completed in S3 |
+| `failed` | Permanent local error or exhausted retry policy |
 
-## Local development setup
+Only validation failures are moved to the rejected folder. Upload failures
+leave the source file in place.
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/your-org/tender-agent.git
-cd tender-agent
+## Repository Layout
 
-# 2. Install dependencies
+```text
+src/
+  agent.ts             Application entry point
+  watcher.ts           Detection, stability checks, and validation
+  queue.ts             Durable SQLite queue and multipart state
+  uploader.ts          Backend API and direct S3 part uploads
+  upload-worker.ts     Background processing and retry policy
+  config.ts            YAML and environment validation
+  runtime.ts           Development and Windows-service paths
+  logger.ts            Console and JSON file logging
+  notification.ts      Windows validation warnings
+
+packaging/
+  build-windows.ps1    Builds the Windows distribution
+  install.ps1          Installs and starts the Windows service
+  uninstall.ps1        Removes the Windows service
+  TenderAgentService.xml
+  config.production.yaml
+
+tests/                 Vitest test suite
+```
+
+## Requirements
+
+For development:
+
+- Node.js 22
+- npm 10+
+- Windows, Linux, or macOS
+
+For an installed manager machine:
+
+- Windows x64
+- Administrator access during installation
+
+Node.js does not need to be installed on the target machine because the
+Windows package includes its own runtime.
+
+## Local Development
+
+```powershell
+git clone https://github.com/Amritbhardwajgsv/local-filewatcher-agent.git
+cd local-filewatcher-agent
 npm install
+Copy-Item .env.example .env
+```
 
-# 3. Copy env template and fill in your values
-cp .env.example .env
+Configure `.env`:
 
-# 4. Edit config.yaml — set your watched folders and cloud API URL
+```env
+CLOUD_API_URL=https://tender-automation-api.onrender.com/api/v1
+CLOUD_API_KEY=replace-with-this-machine-api-key
+AGENT_ID=developer-laptop-01
+```
 
-# 5. Run in development mode
+The backend must contain an enabled agent record with the same agent ID and
+API key.
+
+Run the agent:
+
+```powershell
 npm run dev
 ```
 
----
+Drop a fresh PDF, DOC, or DOCX file into:
+
+```text
+watched/
+```
+
+Successful processing produces `upload_started` and `upload_completed` log
+events.
 
 ## Configuration
 
-All agent behaviour is controlled by `config.yaml`. This file lives next to the executable on the deployed machine.
+Development settings live in `config.yaml`:
 
 ```yaml
 agent:
-  id: "agent-hq-floor2"          # unique name for this machine
+  id: "local-agent-01"
   heartbeat_interval_seconds: 60
+  log_level: "info"
 
 watched_folders:
-  - path: "C:/Documents/Tenders"
-    label: "Tenders"
+  - path: "./watched"
+    label: "Local documents"
     priority: 1
-  - path: "C:/Documents/Contracts"
-    label: "Contracts"
-    priority: 2
 
 validation:
   max_file_size_mb: 100
   allowed_extensions:
     - ".pdf"
     - ".docx"
-    - ".xlsx"
     - ".doc"
-    - ".xls"
+  rejected_folder: "./rejected"
   stability_check_interval_ms: 500
   stability_check_count: 3
+
+upload:
+  request_timeout_ms: 60000
+  max_attempts: 5
+  initial_retry_delay_ms: 5000
+  max_retry_delay_ms: 300000
+  blocked_retry_delay_ms: 300000
+  worker_poll_interval_ms: 1000
 
 logging:
   dir: "./logs"
@@ -102,80 +164,105 @@ logging:
   max_size: "20m"
 ```
 
-Secrets (`api_key`, `cloud_api_url`) go in `.env` — never in `config.yaml`.
-
-```env
-CLOUD_API_URL=https://your-platform.com/api/v1
-CLOUD_API_KEY=sk-agt-xxxxxxxxxxxx
-AGENT_ID=agent-hq-floor2
-```
-
-### Multipart upload API
-
-The agent uploads file chunks directly to S3-compatible storage through
-temporary URLs issued by the backend. AWS credentials must never be stored in
-this repository or on an agent machine.
-
-With `CLOUD_API_URL=http://localhost:3000/api/v1`, the agent uses:
+Relative paths are resolved from the directory containing `config.yaml`.
+When installed as a service, the writable runtime root is:
 
 ```text
-POST /uploads/initiate
-POST /uploads/{sessionId}/parts/{partNumber}
-PUT  {presigned S3 URL}
-POST /uploads/{sessionId}/complete
-POST /uploads/{sessionId}/abort
+C:\ProgramData\TenderAgent
 ```
 
-Completed part ETags are persisted in SQLite. After a network failure or
-restart, completed parts are skipped and only missing chunks are uploaded.
-Temporary failures preserve the multipart session; permanent failures and
-exhausted retries call the abort endpoint.
+## Multipart API Contract
 
-Backend authorization and configuration failures (`401` or `403`) move the
-job into a durable `blocked` state instead of rejecting the file. Blocked jobs
-keep their multipart progress and retry in the background every five minutes.
-Invalid file types and oversized files are still the only files moved to the
-rejected folder.
+The agent uses these backend endpoints:
 
----
+```text
+POST /api/v1/uploads/initiate
+POST /api/v1/uploads/{sessionId}/parts/{partNumber}
+PUT  {presigned S3 URL}
+POST /api/v1/uploads/{sessionId}/complete
+POST /api/v1/uploads/{sessionId}/abort
+```
 
-## Build
+The agent sends its API key as:
 
-```bash
-# Compile TypeScript
+```http
+Authorization: Bearer <machine-api-key>
+```
+
+AWS credentials exist only on the backend. They are never stored in the agent
+configuration or Windows package.
+
+## Verification
+
+```powershell
+npm test
+npm run typecheck
 npm run build
+```
 
-# Build the self-contained Windows x64 distribution
+The current test suite covers:
+
+- Valid, invalid, oversized, and growing files
+- SQLite schema migration and queue transitions
+- Retry scheduling and blocked jobs
+- Multipart chunk boundaries and ETag persistence
+- Resume after interruption
+- Completion and abort behavior
+
+## Build The Windows Package
+
+```powershell
 npm run package:win
 ```
 
-The Windows package is written to:
+Output:
 
 ```text
-release/TenderAgent-Windows-x64.zip
+release\TenderAgent-Windows-x64.zip
 ```
 
-It bundles the compiled agent, the matching Node.js runtime,
-`better-sqlite3`, production dependencies, WinSW, and elevated
-install/uninstall scripts. This layout is used instead of a single-file
-executable because SQLite includes a native Windows module.
+The ZIP contains:
 
----
+- Compiled JavaScript
+- Node.js x64 runtime
+- Production dependencies and native `better-sqlite3`
+- WinSW Windows service wrapper
+- Install and uninstall scripts
+- Production configuration template
 
-## Deployment (Windows)
+No `.env`, API key, SQLite database, watched files, rejected files, or logs
+are included.
 
-1. Extract `TenderAgent-Windows-x64.zip`.
-2. Open PowerShell as Administrator in the extracted directory.
-3. Run:
+## Provision A Machine
+
+Before installation, create a unique backend identity for the machine.
+Example:
+
+```text
+Agent ID: manager-laptop-01
+API key: shown once by the backend administration command
+```
+
+Store only the key hash in the backend. Never reuse one key across multiple
+machines.
+
+If a laptop is lost or decommissioned, revoke only that machine's key.
+
+## Install On Windows
+
+1. Download `TenderAgent-Windows-x64.zip` from the GitHub Release.
+2. Extract it into a temporary directory.
+3. Open PowerShell as Administrator in the extracted directory.
+4. Run:
 
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -File .\install.ps1 `
   -AgentId "manager-laptop-01"
 ```
 
-4. Enter the unique API key for that machine at the secure prompt.
+5. Enter the machine API key at the hidden prompt.
 
-The installer registers the automatic `Tender Agent` service and creates:
+The installer creates:
 
 ```text
 C:\Program Files\TenderAgent
@@ -183,116 +270,113 @@ C:\ProgramData\TenderAgent
 C:\Users\Public\Documents\Tender Uploads
 ```
 
-It also creates the public desktop shortcut `Upload Tender Documents`.
-See `packaging/INSTALL.md` for uninstall and data-retention instructions.
+It also:
 
----
+- Registers the automatic **Tender Agent** Windows service.
+- Configures service restart after failures.
+- Protects the machine `.env` for SYSTEM and Administrators.
+- Creates a public desktop shortcut named **Upload Tender Documents**.
 
-## Deployment (Linux / systemd)
+## Verify An Installation
 
-```bash
-# Copy binary
-sudo cp tender-agent-linux /usr/local/bin/tender-agent
-sudo chmod +x /usr/local/bin/tender-agent
+Check the service:
 
-# Create systemd service
-sudo nano /etc/systemd/system/tender-agent.service
+```powershell
+Get-Service TenderAgent
 ```
 
-```ini
-[Unit]
-Description=Tender Agent
-After=network.target
+It should report `Running`.
 
-[Service]
-ExecStart=/usr/local/bin/tender-agent
-WorkingDirectory=/opt/tender-agent
-Restart=always
-RestartSec=10
-Environment=NODE_ENV=production
+Drop a fresh document into:
 
-[Install]
-WantedBy=multi-user.target
+```text
+C:\Users\Public\Documents\Tender Uploads
 ```
 
-```bash
-sudo systemctl enable tender-agent
-sudo systemctl start tender-agent
+Inspect logs:
+
+```powershell
+Get-Content `
+  "C:\ProgramData\TenderAgent\logs\agent-$(Get-Date -Format yyyy-MM-dd).log" `
+  -Tail 30
 ```
 
----
+Confirm:
 
-## Logs
-
-Logs are written to the `./logs` directory next to the executable, in structured JSON format rotated daily.
-
-```
-logs/
-  agent-2026-06-08.log
-  agent-2026-06-07.log
-  ...
+```text
+upload_started
+upload_completed
 ```
 
-Each log entry looks like:
+Finally, verify the object appears in the private S3 bucket.
 
-```json
-{
-  "timestamp": "2026-06-08T10:42:01.000Z",
-  "level": "info",
-  "event": "file_detected",
-  "agent_id": "agent-hq-floor2",
-  "file": "tender_mumbai_2026.pdf",
-  "path": "C:/Documents/Tenders/tender_mumbai_2026.pdf",
-  "size_bytes": 2457600
-}
+## Uninstall
+
+Run PowerShell as Administrator:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File `
+  "C:\Program Files\TenderAgent\uninstall.ps1"
 ```
 
----
+This preserves local configuration, queue data, and logs.
 
-## Build phases
+To remove those as well:
 
-| Phase | What it builds | Status |
-|---|---|---|
-| 1 | Folder watcher — detects new files | in progress |
-| 2 | Stability check + file validator | planned |
-| 3 | SQLite job queue + metadata recorder | planned |
-| 4 | HTTPS uploader with retry + backoff | planned |
-| 5 | Orchestrator, heartbeat, auto-update, Windows Service | planned |
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File `
+  "C:\Program Files\TenderAgent\uninstall.ps1" -PurgeData
+```
 
----
+## Logs And Recovery
 
-## Tech stack
+Installed logs:
 
-| Purpose | Package |
+```text
+C:\ProgramData\TenderAgent\logs
+```
+
+Service-wrapper logs:
+
+```text
+C:\ProgramData\TenderAgent\service-logs
+```
+
+Upload progress is stored in:
+
+```text
+C:\ProgramData\TenderAgent\data\agent.db
+```
+
+After a restart, interrupted jobs return to the queue. Uploaded chunks with
+saved ETags are skipped, so only missing parts are uploaded again.
+
+## Security
+
+- Keep the S3 bucket private with Block Public Access enabled.
+- Use least-privilege IAM permissions on the backend.
+- Store no AWS credentials on agent machines.
+- Use a unique API key per machine.
+- Rotate any credential exposed in logs, screenshots, chat, or Git.
+- Keep `.env`, `data/`, `logs/`, `watched/`, `rejected/`, and `release/`
+  outside version control.
+- Distribute Windows builds through versioned GitHub Releases.
+
+## Technology
+
+| Purpose | Technology |
 |---|---|
-| Folder watching | `chokidar` |
-| File type validation | `file-type` |
-| Hashing | `crypto` (built-in) |
-| Job queue | `better-sqlite3` |
-| HTTP uploads | `axios` |
-| Config schema | `zod` |
-| Config file | `js-yaml` |
-| Logging | `winston` |
-| Windows Service | `node-windows` |
-| Executable bundling | `pkg` |
-
----
-
-## Security notes
-
-- `config.yaml` and `.env` must never be committed to version control — both are in `.gitignore`
-- API keys are transmitted over TLS 1.3 minimum
-- Each agent machine has its own unique `api_key` — if a machine is decommissioned, revoke its key from the cloud dashboard
-- File checksums (SHA-256) are verified end-to-end between agent and cloud
-
----
-
-## Contributing
-
-This is an internal tool. Raise a PR against `main`. All PRs require one reviewer approval before merge. Keep each PR scoped to one phase or one bug fix.
-
----
+| Language/runtime | TypeScript, Node.js 22 |
+| Folder monitoring | Chokidar |
+| Durable queue | SQLite, better-sqlite3 |
+| HTTP client | Axios |
+| Cloud storage | Amazon S3 multipart uploads |
+| Validation | Zod, js-yaml |
+| Logging | Winston |
+| Tests | Vitest |
+| Windows service | WinSW |
+| Packaging | PowerShell, bundled Node runtime |
 
 ## License
 
-Internal use only — © Frauscher Sensor technology Gmbh
+Internal use only.
