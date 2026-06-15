@@ -21,7 +21,7 @@ function main(): void {
   const { config, secrets } = loadedConfig;
   const logger = createLogger(config);
   const uploadQueue = new UploadQueue();
-  const uploader = new FileUploader(config, secrets);
+  const uploader = new FileUploader(config, secrets, uploadQueue);
   const uploadWorker = new UploadWorker(
     uploadQueue,
     uploader,

@@ -110,6 +110,33 @@ CLOUD_API_KEY=sk-agt-xxxxxxxxxxxx
 AGENT_ID=agent-hq-floor2
 ```
 
+### Multipart upload API
+
+The agent uploads file chunks directly to S3-compatible storage through
+temporary URLs issued by the backend. AWS credentials must never be stored in
+this repository or on an agent machine.
+
+With `CLOUD_API_URL=http://localhost:3000/api/v1`, the agent uses:
+
+```text
+POST /uploads/initiate
+POST /uploads/{sessionId}/parts/{partNumber}
+PUT  {presigned S3 URL}
+POST /uploads/{sessionId}/complete
+POST /uploads/{sessionId}/abort
+```
+
+Completed part ETags are persisted in SQLite. After a network failure or
+restart, completed parts are skipped and only missing chunks are uploaded.
+Temporary failures preserve the multipart session; permanent failures and
+exhausted retries call the abort endpoint.
+
+Backend authorization and configuration failures (`401` or `403`) move the
+job into a durable `blocked` state instead of rejecting the file. Blocked jobs
+keep their multipart progress and retry in the background every five minutes.
+Invalid file types and oversized files are still the only files moved to the
+rejected folder.
+
 ---
 
 ## Build

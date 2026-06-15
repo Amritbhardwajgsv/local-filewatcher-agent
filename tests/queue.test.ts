@@ -198,6 +198,80 @@ describe('UploadQueue', () => {
     });
   });
 
+  it('returns a blocked job when its retry time is due', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+    queue.addJob('report.pdf', 'C:\\files\\report.pdf', 2048);
+    queue.markUploading(1);
+
+    const retryAt = new Date('2030-01-01T00:05:00.000Z');
+    expect(queue.scheduleBlocked(1, 'Forbidden', retryAt)).toBe(true);
+    expect(
+      queue.getNextPendingJob(new Date('2030-01-01T00:04:59.999Z')),
+    ).toBeUndefined();
+    expect(queue.getNextPendingJob(retryAt)).toMatchObject({
+      id: 1,
+      status: 'blocked',
+      retryCount: 1,
+      lastError: 'Forbidden',
+    });
+    expect(queue.claimNextPendingJob(retryAt)).toMatchObject({
+      id: 1,
+      status: 'uploading',
+    });
+  });
+
+  it('recovers previously failed authorization jobs as blocked', () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'queue-test-'),
+    );
+
+    const databasePath = path.join(temporaryFolder, 'agent.db');
+    const database = new Database(databasePath);
+    database.exec(`
+      CREATE TABLE upload_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      INSERT INTO upload_jobs (
+        filename,
+        file_path,
+        size_bytes,
+        status,
+        retry_count,
+        last_error,
+        created_at
+      )
+      VALUES (
+        'blocked.pdf',
+        'C:\\files\\blocked.pdf',
+        100,
+        'failed',
+        1,
+        'Upload request failed with HTTP 403',
+        '2026-06-15T00:00:00.000Z'
+      );
+    `);
+    database.close();
+
+    queue = new UploadQueue(databasePath);
+
+    expect(queue.getJob(1)).toMatchObject({
+      status: 'blocked',
+      retryCount: 1,
+    });
+  });
+
   it('recovers interrupted uploading jobs after restart', () => {
     temporaryFolder = fs.mkdtempSync(
       path.join(os.tmpdir(), 'queue-test-'),

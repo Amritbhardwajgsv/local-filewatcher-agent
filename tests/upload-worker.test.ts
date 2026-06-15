@@ -44,7 +44,8 @@ describe('UploadWorker', () => {
   it('uploads and completes the next queued job', async () => {
     const setup = createSetup();
     const upload = vi.fn().mockResolvedValue(undefined);
-    worker = new UploadWorker(queue!, { upload }, setup.uploadConfig);
+    const abort = vi.fn().mockResolvedValue(undefined);
+    worker = new UploadWorker(queue!, { upload, abort }, setup.uploadConfig);
 
     worker.start();
 
@@ -59,7 +60,12 @@ describe('UploadWorker', () => {
     const upload = vi
       .fn()
       .mockRejectedValue(new UploadError('Server unavailable', true, 503));
-    worker = new UploadWorker(queue!, { upload }, setup.uploadConfig);
+    const abort = vi.fn().mockResolvedValue(undefined);
+    worker = new UploadWorker(
+      queue!,
+      { upload, abort },
+      setup.uploadConfig,
+    );
 
     worker.start();
 
@@ -81,7 +87,12 @@ describe('UploadWorker', () => {
     const upload = vi
       .fn()
       .mockRejectedValue(new UploadError('Unauthorized', false, 401));
-    worker = new UploadWorker(queue!, { upload }, setup.uploadConfig);
+    const abort = vi.fn().mockResolvedValue(undefined);
+    worker = new UploadWorker(
+      queue!,
+      { upload, abort },
+      setup.uploadConfig,
+    );
 
     worker.start();
 
@@ -92,6 +103,37 @@ describe('UploadWorker', () => {
         last_error: 'Unauthorized',
       });
     });
+    expect(abort).toHaveBeenCalledOnce();
+  });
+
+  it('blocks backend authorization failures for a later retry', async () => {
+    const setup = createSetup();
+    const upload = vi
+      .fn()
+      .mockRejectedValue(
+        new UploadError('Forbidden', false, 403, true),
+      );
+    const abort = vi.fn().mockResolvedValue(undefined);
+    worker = new UploadWorker(
+      queue!,
+      { upload, abort },
+      setup.uploadConfig,
+    );
+
+    worker.start();
+
+    await vi.waitFor(() => {
+      expect(readJob(setup.databasePath)).toMatchObject({
+        status: 'blocked',
+        retry_count: 1,
+        last_error: 'Forbidden',
+      });
+    });
+
+    expect(abort).not.toHaveBeenCalled();
+    expect(
+      new Date(readJob(setup.databasePath).next_attempt_at).getTime(),
+    ).toBeGreaterThan(Date.now());
   });
 
   function createSetup(): {
@@ -101,6 +143,7 @@ describe('UploadWorker', () => {
       max_attempts: number;
       initial_retry_delay_ms: number;
       max_retry_delay_ms: number;
+      blocked_retry_delay_ms: number;
       worker_poll_interval_ms: number;
     };
   } {
@@ -134,6 +177,7 @@ describe('UploadWorker', () => {
         max_attempts: 5,
         initial_retry_delay_ms: 60_000,
         max_retry_delay_ms: 60_000,
+        blocked_retry_delay_ms: 60_000,
         worker_poll_interval_ms: 10,
       },
       logging: {
@@ -157,6 +201,7 @@ describe('UploadWorker', () => {
         max_attempts: 5,
         initial_retry_delay_ms: 60_000,
         max_retry_delay_ms: 60_000,
+        blocked_retry_delay_ms: 60_000,
         worker_poll_interval_ms: 10,
       },
     };

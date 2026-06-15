@@ -23,6 +23,7 @@ upload:
   max_attempts: 5
   initial_retry_delay_ms: 5000
   max_retry_delay_ms: 300000
+  blocked_retry_delay_ms: 300000
   worker_poll_interval_ms: 1000
 
 logging:

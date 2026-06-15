@@ -36,6 +36,7 @@ const ConfigSchema = z.object({
       max_attempts: z.number().int().min(1).default(5),
       initial_retry_delay_ms: z.number().int().min(100).default(5_000),
       max_retry_delay_ms: z.number().int().min(1000).default(300_000),
+      blocked_retry_delay_ms: z.number().int().min(1000).default(300_000),
       worker_poll_interval_ms: z.number().int().min(100).default(1_000),
     })
     .default({
@@ -43,6 +44,7 @@ const ConfigSchema = z.object({
       max_attempts: 5,
       initial_retry_delay_ms: 5_000,
       max_retry_delay_ms: 300_000,
+      blocked_retry_delay_ms: 300_000,
       worker_poll_interval_ms: 1_000,
     }),
   logging: z.object({

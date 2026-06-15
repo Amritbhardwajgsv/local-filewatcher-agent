@@ -75,6 +75,7 @@ logging:
       max_attempts: 5,
       initial_retry_delay_ms: 5_000,
       max_retry_delay_ms: 300_000,
+      blocked_retry_delay_ms: 300_000,
       worker_poll_interval_ms: 1_000,
     });
     expect(result.secrets.cloudApiKey).toBe('test-key');

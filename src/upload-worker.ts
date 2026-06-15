@@ -9,7 +9,7 @@ import {
 
 export class UploadWorker {
   private readonly queue: UploadQueue;
-  private readonly uploader: Pick<FileUploader, 'upload'>;
+  private readonly uploader: Pick<FileUploader, 'upload' | 'abort'>;
   private readonly config: AgentConfig['upload'];
   private timer: NodeJS.Timeout | null = null;
   private activeRun: Promise<void> | null = null;
@@ -18,7 +18,7 @@ export class UploadWorker {
 
   constructor(
     queue: UploadQueue,
-    uploader: Pick<FileUploader, 'upload'>,
+    uploader: Pick<FileUploader, 'upload' | 'abort'>,
     config: AgentConfig['upload'],
   ) {
     this.queue = queue;
@@ -132,20 +132,43 @@ export class UploadWorker {
         attempt,
       });
     } catch (error) {
-      this.handleFailure(job, error, attempt);
+      await this.handleFailure(job, error, attempt);
     }
   }
 
-  private handleFailure(
+  private async handleFailure(
     job: UploadJob,
     error: unknown,
     attempt: number,
-  ): void {
+  ): Promise<void> {
     const logger = getLogger();
     const uploadError =
       error instanceof UploadError
         ? error
         : new UploadError(getErrorMessage(error), true);
+
+    if (uploadError.blocked) {
+      const nextAttemptAt = new Date(
+        Date.now() + this.config.blocked_retry_delay_ms,
+      );
+      this.queue.scheduleBlocked(
+        job.id,
+        uploadError.message,
+        nextAttemptAt,
+      );
+
+      logger.warn('File upload is waiting for configuration recovery', {
+        event: 'upload_blocked',
+        job_id: job.id,
+        file: job.filename,
+        attempt,
+        next_attempt_at: nextAttemptAt.toISOString(),
+        status_code: uploadError.statusCode,
+        error: uploadError.message,
+      });
+      return;
+    }
+
     const canRetry =
       uploadError.retryable &&
       attempt < this.config.max_attempts;
@@ -173,6 +196,17 @@ export class UploadWorker {
         error: uploadError.message,
       });
       return;
+    }
+
+    try {
+      await this.uploader.abort(job);
+    } catch (abortError) {
+      logger.warn('Could not abort multipart upload', {
+        event: 'upload_abort_failed',
+        job_id: job.id,
+        file: job.filename,
+        error: getErrorMessage(abortError),
+      });
     }
 
     this.queue.markFailed(job.id, uploadError.message);

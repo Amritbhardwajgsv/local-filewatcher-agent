@@ -10,19 +10,23 @@ import * as os from 'os';
 import * as path from 'path';
 
 import type { AgentConfig, AgentSecrets } from '../src/config';
-import type { UploadJob } from '../src/queue';
+import { UploadQueue } from '../src/queue';
 import {
   calculateRetryDelay,
   FileUploader,
   UploadError,
 } from '../src/uploader';
 
-let server: http.Server | undefined;
+let temporaryFolder: string;
+let queue: UploadQueue | undefined;
 
 describe('FileUploader', () => {
-  let temporaryFolder: string;
+  let server: http.Server | undefined;
 
   afterEach(async () => {
+    queue?.close();
+    queue = undefined;
+
     if (server) {
       await new Promise<void>((resolve, reject) => {
         server?.close((error) => {
@@ -44,107 +48,254 @@ describe('FileUploader', () => {
     }
   });
 
-  it('streams a multipart upload with authentication and metadata', async () => {
-    temporaryFolder = fs.mkdtempSync(
-      path.join(os.tmpdir(), 'uploader-test-'),
-    );
-    const filePath = path.join(temporaryFolder, 'report.pdf');
-    fs.writeFileSync(filePath, 'PDF content');
+  it('uploads file chunks directly and completes with their ETags', async () => {
+    createQueuedFile('abcdefghijkl');
+    const uploadedChunks = new Map<number, string>();
+    let initiateBody: Record<string, unknown> | undefined;
+    let completeBody: Record<string, unknown> | undefined;
+    let authorization: string | undefined;
+    let idempotencyKey: string | undefined;
+    const listener = await listen(async (request, response, baseUrl) => {
+      authorization = request.headers.authorization;
 
-    const request = await listen((incoming, response) => {
-      let body = '';
-      incoming.setEncoding('utf8');
-      incoming.on('data', (chunk) => {
-        body += chunk;
-      });
-      incoming.on('end', () => {
-        response.writeHead(201);
+      if (
+        request.method === 'POST' &&
+        request.url === '/api/v1/uploads/initiate'
+      ) {
+        idempotencyKey = request.headers['idempotency-key'] as string;
+        initiateBody = JSON.parse(await readBody(request));
+        sendJson(response, 200, {
+          sessionId: 'session-123',
+          chunkSize: 5,
+          totalParts: 3,
+        });
+        return;
+      }
+
+      const partMatch = request.url?.match(
+        /^\/api\/v1\/uploads\/session-123\/parts\/(\d+)$/,
+      );
+
+      if (request.method === 'POST' && partMatch) {
+        const partNumber = Number(partMatch[1]);
+        sendJson(response, 200, {
+          uploadUrl: `${baseUrl}/s3/${partNumber}`,
+        });
+        return;
+      }
+
+      const putMatch = request.url?.match(/^\/s3\/(\d+)$/);
+
+      if (request.method === 'PUT' && putMatch) {
+        const partNumber = Number(putMatch[1]);
+        uploadedChunks.set(partNumber, await readBody(request));
+        response.writeHead(200, {
+          ETag: `"etag-${partNumber}"`,
+        });
         response.end();
-      });
+        return;
+      }
 
-      return () => body;
+      if (
+        request.method === 'POST' &&
+        request.url === '/api/v1/uploads/session-123/complete'
+      ) {
+        completeBody = JSON.parse(await readBody(request));
+        sendJson(response, 200, { status: 'completed' });
+        return;
+      }
+
+      response.writeHead(404);
+      response.end();
     });
+    server = listener.server;
 
     const uploader = new FileUploader(
       createConfig(),
-      createSecrets(request.baseUrl),
+      createSecrets(`${listener.baseUrl}/api/v1`),
+      queue!,
     );
-    await uploader.upload(createJob(filePath));
+    await uploader.upload(queue!.getJob(1)!);
 
-    expect(request.method()).toBe('POST');
-    expect(request.url()).toBe('/api/v1/uploads');
-    expect(request.headers().authorization).toBe('Bearer secret-key');
-    expect(request.headers()['idempotency-key']).toBe('agent-01-7');
-    expect(request.headers()['content-type']).toContain(
-      'multipart/form-data; boundary=',
+    expect(authorization).toBe('Bearer secret-key');
+    expect(idempotencyKey).toBe('agent-01-1');
+    expect(initiateBody).toEqual({
+      filename: 'report.pdf',
+      sizeBytes: 12,
+      agentId: 'agent-01',
+      contentType: 'application/pdf',
+    });
+    expect([...uploadedChunks.entries()]).toEqual([
+      [1, 'abcde'],
+      [2, 'fghij'],
+      [3, 'kl'],
+    ]);
+    expect(completeBody).toEqual({
+      parts: [
+        { partNumber: 1, etag: '"etag-1"' },
+        { partNumber: 2, etag: '"etag-2"' },
+        { partNumber: 3, etag: '"etag-3"' },
+      ],
+    });
+    expect(queue!.getJob(1)).toMatchObject({
+      uploadSessionId: 'session-123',
+      chunkSize: 5,
+      totalParts: 3,
+      uploadedParts: [
+        { partNumber: 1, etag: '"etag-1"' },
+        { partNumber: 2, etag: '"etag-2"' },
+        { partNumber: 3, etag: '"etag-3"' },
+      ],
+    });
+  });
+
+  it('resumes a persisted session without uploading completed parts again', async () => {
+    createQueuedFile('abcdefghij');
+    queue!.saveUploadSession(1, 'session-resume', 5, 2);
+    queue!.saveUploadedPart(1, {
+      partNumber: 1,
+      etag: '"existing-etag"',
+    });
+    const uploadedPartNumbers: number[] = [];
+    let completedParts: unknown;
+    const listener = await listen(async (request, response, baseUrl) => {
+      const partMatch = request.url?.match(
+        /^\/api\/v1\/uploads\/session-resume\/parts\/(\d+)$/,
+      );
+
+      if (request.method === 'POST' && partMatch) {
+        const partNumber = Number(partMatch[1]);
+        sendJson(response, 200, {
+          uploadUrl: `${baseUrl}/s3/${partNumber}`,
+        });
+        return;
+      }
+
+      const putMatch = request.url?.match(/^\/s3\/(\d+)$/);
+
+      if (request.method === 'PUT' && putMatch) {
+        const partNumber = Number(putMatch[1]);
+        uploadedPartNumbers.push(partNumber);
+        await readBody(request);
+        response.writeHead(200, { ETag: `"etag-${partNumber}"` });
+        response.end();
+        return;
+      }
+
+      if (
+        request.method === 'POST' &&
+        request.url === '/api/v1/uploads/session-resume/complete'
+      ) {
+        completedParts = JSON.parse(await readBody(request)).parts;
+        sendJson(response, 200, { status: 'completed' });
+        return;
+      }
+
+      response.writeHead(404);
+      response.end();
+    });
+    server = listener.server;
+
+    const uploader = new FileUploader(
+      createConfig(),
+      createSecrets(`${listener.baseUrl}/api/v1`),
+      queue!,
     );
-    expect(request.body()).toContain('name="agent_id"');
-    expect(request.body()).toContain('agent-01');
-    expect(request.body()).toContain('name="filename"');
-    expect(request.body()).toContain('report.pdf');
-    expect(request.body()).toContain('PDF content');
+    await uploader.upload(queue!.getJob(1)!);
+
+    expect(uploadedPartNumbers).toEqual([2]);
+    expect(completedParts).toEqual([
+      { partNumber: 1, etag: '"existing-etag"' },
+      { partNumber: 2, etag: '"etag-2"' },
+    ]);
   });
 
   it('treats a missing source file as permanent failure', async () => {
+    temporaryFolder = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'uploader-test-'),
+    );
+    queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+    queue.addJob('report.pdf', path.join(temporaryFolder, 'missing.pdf'), 12);
+    queue.markUploading(1);
     const uploader = new FileUploader(
       createConfig(),
       createSecrets('http://127.0.0.1:1/api/v1'),
+      queue,
     );
 
-    await expect(
-      uploader.upload(createJob('C:\\missing\\report.pdf')),
-    ).rejects.toMatchObject({
+    await expect(uploader.upload(queue.getJob(1)!)).rejects.toMatchObject({
       name: 'UploadError',
       retryable: false,
     });
   });
 
-  it('classifies server failures as retryable', async () => {
-    temporaryFolder = fs.mkdtempSync(
-      path.join(os.tmpdir(), 'uploader-test-'),
-    );
-    const filePath = path.join(temporaryFolder, 'report.pdf');
-    fs.writeFileSync(filePath, 'PDF content');
+  it('treats an expired S3 part URL as retryable', async () => {
+    createQueuedFile('abcde');
+    const listener = await listen(async (request, response, baseUrl) => {
+      if (request.url === '/api/v1/uploads/initiate') {
+        await readBody(request);
+        sendJson(response, 200, {
+          sessionId: 'session-expired',
+          chunkSize: 5,
+          totalParts: 1,
+        });
+        return;
+      }
 
-    const request = await listen((_incoming, response) => {
-      response.writeHead(503);
+      if (request.url?.includes('/parts/1')) {
+        sendJson(response, 200, {
+          uploadUrl: `${baseUrl}/expired`,
+        });
+        return;
+      }
+
+      if (request.url === '/expired') {
+        await readBody(request);
+        response.writeHead(403);
+        response.end();
+        return;
+      }
+
+      response.writeHead(404);
       response.end();
-      return () => '';
     });
+    server = listener.server;
     const uploader = new FileUploader(
       createConfig(),
-      createSecrets(request.baseUrl),
+      createSecrets(`${listener.baseUrl}/api/v1`),
+      queue!,
     );
 
-    await expect(uploader.upload(createJob(filePath))).rejects.toEqual(
+    await expect(uploader.upload(queue!.getJob(1)!)).rejects.toEqual(
       expect.objectContaining<Partial<UploadError>>({
         retryable: true,
-        statusCode: 503,
+        statusCode: 403,
       }),
     );
   });
 
-  it('classifies ordinary client failures as permanent', async () => {
-    temporaryFolder = fs.mkdtempSync(
-      path.join(os.tmpdir(), 'uploader-test-'),
-    );
-    const filePath = path.join(temporaryFolder, 'report.pdf');
-    fs.writeFileSync(filePath, 'PDF content');
-
-    const request = await listen((_incoming, response) => {
-      response.writeHead(422);
-      response.end();
-      return () => '';
+  it('classifies a backend authorization failure as blocked', async () => {
+    createQueuedFile('abcde');
+    const listener = await listen(async (request, response) => {
+      await readBody(request);
+      sendJson(response, 403, {
+        error: 'Agent is not authorized',
+      });
     });
+    server = listener.server;
     const uploader = new FileUploader(
       createConfig(),
-      createSecrets(request.baseUrl),
+      createSecrets(`${listener.baseUrl}/api/v1`),
+      queue!,
     );
 
-    await expect(uploader.upload(createJob(filePath))).rejects.toEqual(
+    await expect(uploader.upload(queue!.getJob(1)!)).rejects.toEqual(
       expect.objectContaining<Partial<UploadError>>({
+        blocked: true,
         retryable: false,
-        statusCode: 422,
+        statusCode: 403,
+        message:
+          'Upload request failed with HTTP 403: Agent is not authorized',
       }),
     );
   });
@@ -158,6 +309,18 @@ describe('calculateRetryDelay', () => {
     expect(calculateRetryDelay(0, 5_000, 300_000, () => 0)).toBe(2_500);
   });
 });
+
+function createQueuedFile(content: string): { filePath: string } {
+  temporaryFolder = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'uploader-test-'),
+  );
+  const filePath = path.join(temporaryFolder, 'report.pdf');
+  fs.writeFileSync(filePath, content);
+  queue = new UploadQueue(path.join(temporaryFolder, 'agent.db'));
+  queue.addJob('report.pdf', filePath, Buffer.byteLength(content));
+  queue.markUploading(1);
+  return { filePath };
+}
 
 function createConfig(): AgentConfig {
   return {
@@ -185,6 +348,7 @@ function createConfig(): AgentConfig {
       max_attempts: 5,
       initial_retry_delay_ms: 5_000,
       max_retry_delay_ms: 300_000,
+      blocked_retry_delay_ms: 300_000,
       worker_poll_interval_ms: 1_000,
     },
     logging: {
@@ -203,48 +367,20 @@ function createSecrets(cloudApiUrl: string): AgentSecrets {
   };
 }
 
-function createJob(filePath: string): UploadJob {
-  return {
-    id: 7,
-    filename: 'report.pdf',
-    filePath,
-    sizeBytes: 11,
-    status: 'uploading',
-    retryCount: 0,
-    lastError: null,
-    createdAt: '2026-06-15T00:00:00.000Z',
-    detectedAt: '2026-06-15T00:00:00.000Z',
-    nextAttemptAt: '2026-06-15T00:00:00.000Z',
-    completedAt: null,
-  };
-}
-
 async function listen(
   handler: (
     request: http.IncomingMessage,
     response: http.ServerResponse,
-  ) => () => string,
-): Promise<{
-  baseUrl: string;
-  method: () => string | undefined;
-  url: () => string | undefined;
-  headers: () => http.IncomingHttpHeaders;
-  body: () => string;
-}> {
-  let method: string | undefined;
-  let url: string | undefined;
-  let headers: http.IncomingHttpHeaders = {};
-  let getBody = () => '';
-
-  server = http.createServer((request, response) => {
-    method = request.method;
-    url = request.url;
-    headers = request.headers;
-    getBody = handler(request, response);
+    baseUrl: string,
+  ) => Promise<void>,
+): Promise<{ server: http.Server; baseUrl: string }> {
+  let baseUrl = '';
+  const server = http.createServer((request, response) => {
+    void handler(request, response, baseUrl);
   });
 
   await new Promise<void>((resolve) => {
-    server?.listen(0, '127.0.0.1', resolve);
+    server.listen(0, '127.0.0.1', resolve);
   });
 
   const address = server.address();
@@ -253,11 +389,27 @@ async function listen(
     throw new Error('Test server did not bind to a TCP port');
   }
 
-  return {
-    baseUrl: `http://127.0.0.1:${address.port}/api/v1`,
-    method: () => method,
-    url: () => url,
-    headers: () => headers,
-    body: () => getBody(),
-  };
+  baseUrl = `http://127.0.0.1:${address.port}`;
+  return { server, baseUrl };
+}
+
+async function readBody(request: http.IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function sendJson(
+  response: http.ServerResponse,
+  statusCode: number,
+  value: unknown,
+): void {
+  response.writeHead(statusCode, {
+    'Content-Type': 'application/json',
+  });
+  response.end(JSON.stringify(value));
 }
