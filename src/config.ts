@@ -4,8 +4,6 @@ import * as dotenv from 'dotenv';
 import * as yaml from 'js-yaml';
 import { z } from 'zod';
 
-dotenv.config();
-
 // Defines the configuration for one folder monitored by the agent.
 const WatchedFolderSchema = z.object({
   path: z.string().min(1, 'Folder path cannot be empty'),
@@ -83,11 +81,17 @@ function loadSecrets(): AgentSecrets {
   return { cloudApiUrl, cloudApiKey, agentId };
 }
 
-export function loadConfig(configPath = './config.yaml'): {
+export function loadConfig(
+  configPath = './config.yaml',
+  envPath = path.join(path.dirname(path.resolve(configPath)), '.env'),
+): {
   config: AgentConfig;
   secrets: AgentSecrets;
 } {
   const absolutePath = path.resolve(configPath);
+  const configDirectory = path.dirname(absolutePath);
+
+  dotenv.config({ path: path.resolve(envPath) });
 
   if (!fs.existsSync(absolutePath)) {
     throw new Error(`config.yaml not found at: ${absolutePath}`);
@@ -106,7 +110,33 @@ export function loadConfig(configPath = './config.yaml'): {
   }
 
   return {
-    config: result.data,
+    config: {
+      ...result.data,
+      watched_folders: result.data.watched_folders.map((folder) => ({
+        ...folder,
+        path: resolveConfigPath(configDirectory, folder.path),
+      })),
+      validation: {
+        ...result.data.validation,
+        rejected_folder: resolveConfigPath(
+          configDirectory,
+          result.data.validation.rejected_folder,
+        ),
+      },
+      logging: {
+        ...result.data.logging,
+        dir: resolveConfigPath(
+          configDirectory,
+          result.data.logging.dir,
+        ),
+      },
+    },
     secrets: loadSecrets(),
   };
+}
+
+function resolveConfigPath(baseDirectory: string, value: string): string {
+  return path.isAbsolute(value)
+    ? path.normalize(value)
+    : path.resolve(baseDirectory, value);
 }

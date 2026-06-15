@@ -1,0 +1,18 @@
+<service>
+  <id>TenderAgent</id>
+  <name>Tender Agent</name>
+  <description>Watches the public tender folder and uploads validated documents securely.</description>
+  <executable>%BASE%\node.exe</executable>
+  <arguments>"%BASE%\dist\agent.js"</arguments>
+  <workingdirectory>C:\ProgramData\TenderAgent</workingdirectory>
+  <env name="TENDER_AGENT_HOME" value="C:\ProgramData\TenderAgent" />
+  <logpath>C:\ProgramData\TenderAgent\service-logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+  <startmode>Automatic</startmode>
+  <onfailure action="restart" delay="10 sec" />
+  <onfailure action="restart" delay="30 sec" />
+  <stoptimeout>30 sec</stoptimeout>
+</service>

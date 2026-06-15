@@ -145,45 +145,46 @@ rejected folder.
 # Compile TypeScript
 npm run build
 
-# Build Windows executable (requires pkg)
-npm install -g pkg
-pkg . --targets node18-win-x64 --output dist/tender-agent.exe
-
-# Build Linux binary
-pkg . --targets node18-linux-x64 --output dist/tender-agent-linux
+# Build the self-contained Windows x64 distribution
+npm run package:win
 ```
+
+The Windows package is written to:
+
+```text
+release/TenderAgent-Windows-x64.zip
+```
+
+It bundles the compiled agent, the matching Node.js runtime,
+`better-sqlite3`, production dependencies, WinSW, and elevated
+install/uninstall scripts. This layout is used instead of a single-file
+executable because SQLite includes a native Windows module.
 
 ---
 
 ## Deployment (Windows)
 
-The agent ships as a single `.exe`. IT setup on each machine takes under 5 minutes.
+1. Extract `TenderAgent-Windows-x64.zip`.
+2. Open PowerShell as Administrator in the extracted directory.
+3. Run:
 
-**Step 1 — Create the agent folder**
-```
-C:\TenderAgent\
-  tender-agent.exe
-  config.yaml
-  .env
-```
-
-**Step 2 — Edit `config.yaml`**
-Set the correct `agent.id` and watched folder paths for this machine.
-
-**Step 3 — Edit `.env`**
-Paste in the `CLOUD_API_KEY` issued from the cloud dashboard for this agent.
-
-**Step 4 — Register as a Windows Service**
-```cmd
-tender-agent.exe --install
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\install.ps1 `
+  -AgentId "manager-laptop-01"
 ```
 
-The agent now starts automatically on every boot. To verify it's running, check **Services → TenderAgent** in Windows.
+4. Enter the unique API key for that machine at the secure prompt.
 
-**To uninstall:**
-```cmd
-tender-agent.exe --uninstall
+The installer registers the automatic `Tender Agent` service and creates:
+
+```text
+C:\Program Files\TenderAgent
+C:\ProgramData\TenderAgent
+C:\Users\Public\Documents\Tender Uploads
 ```
+
+It also creates the public desktop shortcut `Upload Tender Documents`.
+See `packaging/INSTALL.md` for uninstall and data-retention instructions.
 
 ---
 

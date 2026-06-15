@@ -70,6 +70,15 @@ logging:
     expect(
       result.config.validation.allowed_extensions,
     ).toContain('.pdf');
+    expect(result.config.watched_folders[0].path).toBe(
+      path.join(temporaryFolder, 'watched'),
+    );
+    expect(result.config.validation.rejected_folder).toBe(
+      path.join(temporaryFolder, 'rejected'),
+    );
+    expect(result.config.logging.dir).toBe(
+      path.join(temporaryFolder, 'logs'),
+    );
     expect(result.config.upload).toEqual({
       request_timeout_ms: 60_000,
       max_attempts: 5,

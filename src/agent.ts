@@ -4,12 +4,17 @@ import { FolderWatcher, type DetectedFile } from './watcher';
 import { UploadQueue } from './queue';
 import { FileUploader } from './uploader';
 import { UploadWorker } from './upload-worker';
+import { getRuntimePaths } from './runtime';
 
 function main(): void {
   let loadedConfig: ReturnType<typeof loadConfig>;
+  const runtimePaths = getRuntimePaths();
 
   try {
-    loadedConfig = loadConfig('./config.yaml');
+    loadedConfig = loadConfig(
+      runtimePaths.configPath,
+      runtimePaths.envPath,
+    );
   } catch (error) {
     console.error(
       '[FATAL] Failed to load config:',
@@ -20,7 +25,7 @@ function main(): void {
 
   const { config, secrets } = loadedConfig;
   const logger = createLogger(config);
-  const uploadQueue = new UploadQueue();
+  const uploadQueue = new UploadQueue(runtimePaths.databasePath);
   const uploader = new FileUploader(config, secrets, uploadQueue);
   const uploadWorker = new UploadWorker(
     uploadQueue,
@@ -34,6 +39,7 @@ function main(): void {
     version: '1.0.0',
     node_version: process.version,
     platform: process.platform,
+    runtime_home: runtimePaths.homeDir,
   });
 
   function onFileDetected(file: DetectedFile): void {
