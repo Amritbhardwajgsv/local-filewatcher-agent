@@ -1,0 +1,1107 @@
+
+
+
+	
+	
+	
+	
+	
+
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<html lang="en">
+<head>
+<meta name="description" content="Indian Railways eProcurement Systems">
+<meta name="keywords" content="Search Railways e-tender,Search Railways Supply tender,Search Railways Works tender,Search Railways e-auction tender,Indian Railways works tender,Indian Railways goods tender,Indian Railways services tender,Indian Railways supply tender,Indian Railways e-tender,Indian Railways e-auction,Railway Board tender,Railway Board e-tender,eProcurement,e-Procurement,Indian Railways,cris">
+<title>Search-Indian Railways tenders for Goods, Works and Services</title>
+<link rel="shortcut icon" href="/ireps/images/common/favicon.ico" type="image/x-icon"> 
+<LINK href="/ireps/images/common/favicon.ico" type="image/vnd.microsoft.icon" rel="shortcut icon">
+<LINK href="/ireps/images/common/favicon.ico" type="image/vnd.microsoft.icon" rel="icon">
+<link rel="stylesheet" type="text/css" href="/ireps/css/irepsCommonCss.css">
+<script language="javascript" src="/ireps/pki/CRISPKI.js"></script>
+<script type="text/javascript" src="/ireps/js/jquery.1.11.1.js"></script>
+<script type="text/javascript" src="/ireps/js/works/postRequest.js"></script>
+</head>
+
+<body>
+
+<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0" align="center" style="background-color:#ffffff;" class="table_br">
+  <tr valign="top"> 
+    <td colspan="3" height="75" width="100%">
+		
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous">
+
+<script src="https://cdn.ux4g.gov.in/tools/accessibility-widget.js" integrity="sha384-419MfWzsRfYF7SIkBaHGUOahD9+c4R5PsHwlx/eOlSVQKAEC6nh7lPMHhXAVLcpB" crossorigin="anonymous"></script>
+
+<style type="text/css">
+.epsLabel {
+	font-size: 33px;
+	/* font-family: Cambria; */
+	font-weight: normal;
+	letter-spacing: 2px;
+	color: white;
+	font-family: 'Roboto', sans-serif;
+}
+.small-text{
+color:white}
+.small-text:hover {
+    color: red;
+}
+	
+</style>
+<style>
+.gradientClass{
+background: #07222E;
+font-family: 'Adobe Garamond Pro', sans-serif;
+ 
+}
+
+
+
+
+        .custom-select option {
+            color: black;
+        }
+     
+  .custom-select {
+            margin-right: 30px;
+            border: 0px;
+            width: 220px;
+            background-color: transparent;
+            color: white;
+            height: 45px;
+            -webkit-appearance: none; 
+            -moz-appearance: none; 
+            appearance: none; 
+        }
+
+        .custom-select option {
+            color: black;
+        }
+        .small-text{
+			color:white;
+			font-weight: normal;
+			font-family: 'Adobe Garamond Pro', sans-serif;
+			text-transform: capitalize;
+		}
+	#mainHr {
+    margin-top: -4px;
+    margin-bottom: 0rem;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, .1);
+}
+
+
+
+    .controls { display: flex; align-items: center; gap: .5rem; }
+.btn1 {
+border: 1px solid rgba(255,255,255,.35); color: #fff; padding: 4px 6px; border-radius: 8px; cursor: pointer; background-color:transparent; font: inherit;
+}
+
+.btn1:hover {
+  background-color: rgba(255, 255, 255, 0.2) !important; /* Highlight on hover */
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+
+
+
+:root {
+    --app-font-size: 14px;
+}
+
+/* Font size - Apply to ALL elements */
+*, *::before, *::after {
+    font-size: var(--app-font-size) ;
+}
+
+/* Dark theme styles */
+.dark-theme {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark-theme body,
+.dark-theme div,
+.dark-theme span,
+.dark-theme p,
+.dark-theme td,
+.dark-theme th,
+.dark-theme label {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark-theme input,
+.dark-theme textarea,
+.dark-theme select,
+.dark-theme button {
+    background-color: #333333 !important;
+    color: #ffffff !important;
+    border-color: #555555 !important;
+}
+
+.dark-theme table,
+.dark-theme .table {
+    background-color: #1a1a1a;
+    color: #ffffff !important;
+}
+
+.dark-theme table td,
+.dark-theme table th,
+.dark-theme .table td,
+.dark-theme .table th {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: #555555 !important;
+}
+
+
+
+.dark-theme button,
+.dark-theme input[type="button"],
+.dark-theme input[type="submit"],
+.dark-theme .btn {
+    background-color: #444444 !important;
+    color: #ffffff !important;
+    border-color: #666666 !important;
+}
+
+</style>
+<script>
+var currentSize = 14;   // default font size in px
+var maxClicks = 4;      // maximum allowed A+ or A- clicks
+var clicks = 0;         // counter
+function changeFontSize(action) {
+		
+	   if (action === 'increase' && clicks < maxClicks) {
+	     currentSize += 2;
+	     clicks++;
+	   } else if (action === 'decrease' && clicks > -maxClicks) {
+	     currentSize -= 2;
+	     clicks--;
+	   } else if (action === 'reset') {
+	     currentSize = 14;
+	     clicks = 0;   // reset click count
+	   }
+
+	   document.documentElement.style.setProperty('--app-font-size', currentSize + 'px');
+	    localStorage.setItem('fontSize', currentSize);
+// Ensure nav grows correctly
+	   document.querySelectorAll('.container-fluid-custompadding.gradientClass').forEach(function(el){
+	     el.style.height = 'auto';
+	     el.style.minHeight = '45px';
+	   });
+
+	 }
+
+/* function changeFontSize(action) {
+    let currentSize = parseFloat(localStorage.getItem('fontSize')) || 14;
+    
+    switch(action) {
+        case 'increase': currentSize = Math.min(currentSize + 2, 24); break;
+        case 'decrease': currentSize = Math.max(currentSize - 2, 12); break;
+        case 'reset': currentSize = 14; break;
+}
+
+    document.documentElement.style.setProperty('--app-font-size', currentSize + 'px');
+    localStorage.setItem('fontSize', currentSize);
+    
+    // Force refresh layout for buttons and tables
+    const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]');
+    buttons.forEach(btn => btn.style.display = 'none');
+    setTimeout(() => buttons.forEach(btn => btn.style.display = ''), 1);
+} */
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const body = document.body;
+    const isDark = html.classList.toggle('dark-theme');
+    body.classList.toggle('dark-theme', isDark);
+
+    document.getElementById('darkModeBtn').textContent = isDark ? 'Light' : 'Dark';
+
+    localStorage.setItem('darkMode', isDark);
+}
+
+// **MODIFIED: Reset font size on page refresh**
+window.addEventListener('load', function() {
+    // ALWAYS reset font size to default on page refresh
+    document.documentElement.style.setProperty('--app-font-size', '14px');
+    localStorage.setItem('fontSize', '14');
+
+    // Only preserve dark mode setting
+    const darkMode = localStorage.getItem('darkMode') === 'true';
+    if (darkMode) {
+        document.documentElement.classList.add('dark-theme');
+        document.body.classList.add('dark-theme');
+        const btn = document.getElementById('darkModeBtn');
+        if (btn) btn.textContent = 'Light';
+    }
+});
+</script>
+<body>				
+ <table class="gradientClass"  width="100%">
+	<tr><td>&nbsp;</td></tr>
+
+	<tr>
+	                   
+		<td width="20%"><img src="/ireps/images/gem-new-logo-v6.png" style="margin-left:40px;width:350px;height:auto;" alt="Government eMarketplace (IREPS) logo"/></td>
+		
+		<td width="60%" align="center">
+		<div style="color:white; font-family: 'Adobe Garamond Pro', sans-serif; font-size:27px;    line-height: 1.2;">
+ 			Government eMarketplace <br>
+			<font style="color: gold;font-size:27px;">Indian Railways E-Procurement System</font>
+		</div>
+		</td>
+	    <td align="center" width="20%">
+			
+			
+            <div class="controls" aria-label="Display controls" style="display:flex; justify-content: flex-end; gap:5px;margin-right:70px;">
+                <button class="btn1" id="fontDec" title="Decrease font size" onclick="changeFontSize('decrease')">A -</button>
+                <button class="btn1" id="fontReset" title="Reset font size" onclick="changeFontSize('reset')">A</button>
+                <button class="btn1" id="fontInc" title="Increase font size" onclick="changeFontSize('increase')">A +</button>
+                 <button class="btn1" id="themeToggle" title="Toggle dark/light" onclick="toggleDarkMode()">  &#x1F319; / &#x2600;</button>
+           </div>&nbsp;
+           <div class="right-section">
+                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                          <label for="language" style="color:white;">Select Your Language</label>
+                                                <!--  REQUIRED for BHASHINI PLUGIN -->
+						    <div class="bhashini-plugin-container"></div>
+						                        </div>
+						           
+        
+		</td>	
+		
+    </tr>
+    	<!-- <tr>
+		<td style="margin-left:40px;width:350px;height:auto; " width="100%" colspan="3">
+	       <div style="width: 20%; text-align: right;">
+            <div class="controls" aria-label="Display controls" style="display:flex; justify-content: flex-end; gap:5px;">
+                <button class="btn1" id="fontDec" title="Decrease font size" onclick="changeFontSize('decrease')">A -</button>
+                <button class="btn1" id="fontReset" title="Reset font size" onclick="changeFontSize('reset')">A</button>
+                <button class="btn1" id="fontInc" title="Increase font size" onclick="changeFontSize('increase')">A +</button>
+                 <button class="btn1" id="themeToggle" title="Toggle dark/light" onclick="toggleDarkMode()">  &#x1F319; / &#x2600;</button>
+           </div>
+        </div>
+		</td>
+	</tr> -->
+	<tr height="16px"><td>&nbsp;</td></tr>
+	
+</table>
+</body>
+<hr style="color:#4A4A4A;" id="mainHr">
+	</td>
+  </tr>
+  <tr>
+    <td colspan="3" height="20">
+		
+<head>
+<link rel="stylesheet" type="text/css" href="/ireps/css/menuStyle.css">
+<link rel="stylesheet" href="/ireps/js/newJS/fontawesome/css/fontawesome.css">
+<link href="/ireps/js/newJS/fontawesome/css/brands.css" rel="stylesheet">
+<link href="/ireps/js/newJS/fontawesome/css/solid.css" rel="stylesheet">
+
+<script type="text/javascript" src="/ireps/js/newJS/fontawesome/js/fontawesome.js"></script>
+<script type="text/javascript" src="/ireps/js/newJS/fontawesome/js/brands.js"></script>
+<script type="text/javascript" src="/ireps/js/newJS/fontawesome/js/solid.js"></script>
+<script type="text/javascript">
+var proto="https:";
+var hostadd=window.location.host;
+var linkUrl;
+/*-----------------------------Added by Aastha---------------------------------*/
+var res = hostadd.substring(0,3);
+var context = "eps";
+if(res!='www') 
+{
+	linkUrl=proto+"//www." +hostadd + "/";   
+}
+if((hostadd=="10.60.200.142") || (hostadd=="203.176.113.40"))
+{
+	linkUrl=proto+"//" +hostadd + "/";
+}
+else 
+	linkUrl=proto+"//" +hostadd + "/";
+
+function home1() 
+{
+	window.document.location.href=linkUrl+"ireps.html";
+}
+</script>
+<style>
+
+#wrapper1 {
+    background: #07222E;
+	font-family: 'Adobe Garamond Pro', sans-serif;
+    width: 100%;
+    height: 30px;
+}
+
+</style>
+<script>
+		function showHelpDeskQueryPage()
+		{
+		    window.open(linkUrl+'html/helpdesk/helpdesk.html');
+		}
+		</script>				
+</head>
+
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+	  		<tr>
+			   <td colspan="2" height="40">
+			   		<div id="wrapper1" >	
+						<ul style="list-style-type: none; padding: 0; margin: 0;">
+							<li style="background-color:transparent;line-height:30px; padding:0 50px; margin:0 2px; color:white; text-decoration:none;display:block;"><a href="javascript:home1();" style="color:white;"><i class="fa fa-home" style="font-size:27px;color:white;"></i></a>
+									<a style="float:right;color:white;font-size: 25px;" title="contact helpdesk" href="javascript:showHelpDeskQueryPage()" rel="noopener noreferrer" ><i class="fas fa-phone mt-1"></i></a>
+							</li>
+						</ul>
+					</div>
+				</td>
+			</tr>
+    </table>&nbsp;
+	</td>
+  </tr>
+  <tr> 
+    <td colspan="3" height="25" width="100%" >
+		
+	</td>
+  </tr>
+  <tr> 
+ 	
+    <td rowspan="1" width="12%" valign="top" >
+		
+	</td>
+    <td width="73%" valign="top" align="center" >
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="/ireps/js/datetimepicker.js"></script>
+<script type="text/javascript" src="/ireps/js/check4SpecialChars.js"></script>
+<script type="text/javascript" src="/ireps/js/works/advanceSearchAnonym.js"></script>
+
+<script type="text/javascript" src="/ireps/js/jquery.1.11.1.js"></script>
+<script type="text/javascript" src="/ireps/js/jquery-ui.1.11.1.js"></script>
+<script src="/ireps/js/works/postRequest.js"></script>
+<script type="text/javascript" charset="utf8" src="/ireps/js/IMMS/common/tables/datatables.js"></script>
+<link rel="stylesheet" type="text/css" href="/ireps/js/IMMS/common/tables/datatables.css">
+
+<script type="text/javascript">
+$(document).ready(function(){
+	$('#showingDataTable').DataTable(
+	   		 {
+	   			
+						"dom": '<"dt-buttons"Bf><"clear">lirtp',
+						"autoWidth": true,
+						 "aaSorting": [],
+						 lengthMenu: [
+		    		            [ 50, 100, 500, -1 ],
+		    		            [ '50', '100', '500', 'Show all' ]
+		    		        ],
+	   		        buttons: [
+	   		        	{  extend: 'excel',  text: 'Export to Excel',  className: 'btn-cvap-a btn-margin-bottom' ,
+	   		        		exportOptions: {
+	   		                    columns: [ 0, 1, 2,3 ]
+	   		                }
+	   		        		
+	   		        	}
+	   		        ] 
+	   		    }	
+	   
+	   );  
+	   $('.dataTables_filter input[type="search"]').css(
+			     {'width':'150px','height':'20px','margin-right':'25px'}
+			  ); 
+	
+});
+</script>
+
+ 
+
+
+<table width="100%" cellpadding="0" cellspacing="0" class="table_bg" border="0">
+<tr>  
+	<td width="100%" valign="top" style="align-content: center;">
+		<div align="center">
+<table width="98%" align="center">	
+<tr>
+<td height="150" align="center">
+<table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+<tr>
+<td width="100%" height="26" valign="top">
+	<table width="100%" border="0" cellpadding="0" cellspacing="0" class="titleStyle">
+		<tr>
+			<td width="2.3%" height="26" valign="top"><div id="topLeft"></div></td>
+			<td width="85%" valign="top" class="heading">&nbsp;<b>Search Tender </b> </td>
+			<td width="10%" valign="top" class="heading">&nbsp;<b><img src="/ireps/images/common/arraowImage.gif" width="40" height="18" border="0" alt="Guest Logout"> <A HREF="/epsn/home/logout.do" title="Guest Logout"><i class="fa fa-power-off" style="font-size:21px;color:white"></i></A></b> </td>
+			<td width="2.3%" valign="top"><div id="topRight"></div> </td>
+		</tr>
+	</table>
+</td>
+</tr>		
+<tr>
+<td valign="top" class="boxStyle">
+<form name="advancedSearchForm" method="post" action="/epsn/anonymSearch.do">
+													
+	
+	     <table><tr><td height="20" align="center" class="formLabel"> <b><div class="errorStyle"></div> <br>							
+		</td></tr></table>
+	     <table width="97%" border="0" class="advSearch" cellspacing="2" >
+	     	<tr> 
+						  <td align="center" COLSPAN=1>  <input type="submit" name="submit" value="Active Tenders Closing Today" onclick="return setDateRangeForTender('openToday')" class="buttonStyle" id="openTodayId">&nbsp; </td>
+						  <td align="center" COLSPAN=1>  <input type="submit" name="submit" value="All Active Tenders" onclick="return setDateRangeForTender('active')" class="buttonStyle" id="activeTenderId">&nbsp; </td>
+						  <td align="center" COLSPAN=1>  <input type="submit" name="submit" value="Recently Closed Tenders" onclick="return setDateRangeForTender('closed')" class="buttonStyle" id="closedTenderId">&nbsp; </td>
+						  <td align="center" COLSPAN=1>  <input type="submit" name="submit" value="Custom Search" onclick="return setDateRangeForTender('custumSearch')" class="buttonStyle" id="custumSearchId"> &nbsp;</td>
+                         
+                          
+						  <td align="center" COLSPAN=1>  <input type="submit" name="submit" value="Live & Upcoming e-RA" onclick="return setDateRangeForTender('activeAuction')" class="buttonStyle" id="activeAuctionId">&nbsp; </td>
+						  <td align="center" COLSPAN=1>  <input type="submit" name="submit" value="Closed e-RA" onclick="return setDateRangeForTender('closedAuction')" class="buttonStyle" id="closedAuctionId">&nbsp; </td>
+			</tr>
+	     </table>
+	     <table width="97%" border="0" class="advSearch" cellspacing="2" >
+		      			
+											<tr id="searchCritBlock" style="display: none;">                   
+							         <td colspan=4>
+										
+											<table width="100%" border="0"> 
+													<tr><td>&nbsp;</td> </tr>
+													<tr height="40px;"> 							
+														<td class="formLabel" colspan="4"><b>(Please choose one or more option for search, view & Downloading E-Tender Notices and Click 'Show results' to view Details of E-tenders)</td>
+													</tr>                        
+											
+													<tr>
+														<td class="formLabel" >Search Criteria: </td>
+														<td>
+															<table>
+																<tr>
+																	<td>
+																		<select name="searchOption" onchange="createOptorDpdw();" class="comboStyle"><option value="1">Tender Number</option>
+																			 <option value="2">Name Of Work</option>
+																			 <option value="3">Item Code</option>
+																			 <option value="4">Item Description</option></select>&nbsp;&nbsp;
+																	 </td>
+																	 
+																	 <td>			
+				 															<select name="searchOptorOption"  class="comboStyle" id="searchOptorOption">
+																			 </select>
+																			 
+																			 <script>
+																			   createOptorDpdw();																			  
+																			   document.getElementById('searchOptorOption').value = 0;
+																	 		 </script>
+				 													</td>
+				 												</tr>
+				 											</table>
+														</td>
+														<td class="formLabel">Search For :</td>
+														<td ><input type="text" name="advancedSearch" maxlength="19" size="30" value="" class="textBoxStyleForLocal" id="searchtext"></td>
+													</tr> 
+													<tr height="40px;">
+														<td class="formLabel" colspan="4"> <font size="1">Note:- Please enter minimum first 3 characters of Tender Number or PLNO (these are case sensitive) or any 3 consecutive characters of Tender title or item description. </font></td>
+													</tr>
+												</table>
+												
+												
+											</td>
+										</tr>				
+					<tr id="searchInBlock" style="display: none;">                   
+										<td colspan=4>
+									
+											
+											<table width="100%" border="0"> 						
+					
+										<tr height="40px;">
+											<td class="formLabel">Organization</td>
+											
+											<td>
+											    
+												
+												<select name="organization" onchange="return selectOrgZone()" style="width:260px;" class="comboStyle" id="organization"><option value="12">BRAITHWAITE AND CO. LIMITED</option>
+<option value="11">CONTAINER CORPORATION OF INDIA LTD</option>
+<option value="05">CRIS</option>
+<option value="08">DFCCIL</option>
+<option value="03">DMRC</option>
+<option value="16">INDIAN RAILWAY CATERING AND TOURISM CORPORATION LTD</option>
+<option value="17">INDIAN RAILWAY FINANCE CORPORATION</option>
+<option value="15">IRCON INTERNATIONAL LIMITED</option>
+<option value="01" selected="selected">Indian Railway</option>
+<option value="09">KERALA RAIL DEVELOPMENT CORPORATION LTD</option>
+<option value="18">KOLKATA METRO RAIL CORPORATION LTD</option>
+<option value="02">KRCL</option>
+<option value="04">MRVC</option>
+<option value="10">RAIL VIKAS NIGAM LIMITED</option>
+<option value="07">RAILTEL</option>
+<option value="06">RITES Limited</option></select>	
+											</td>
+																
+						<td class="formLabel">Work Area<font color="#C00000"> * </font></td>
+											<td>	
+							<select name="workArea" onchange="return selectZone()" style="width:200px;" class="comboStyle" id="workArea"><option value="-1" selected="selected">All</option>
+								<option value="WT">Works</option>	
+								<option value="PT">Goods & Services</option>	
+								<option value="LT">Earning / Leasing</option></select>
+											</td>
+											
+										</tr>
+										<tr height="40px;">
+											<td class="formLabel">Railway/PU<font color="#C00000"> * </font></td>
+											<td>
+												<input type="hidden" name="changezone" id="changezone">	
+												
+												<select name="railwayZone" onchange="return selectZone()" style="width:260px;" class="comboStyle" id="railwayZone"><option value="">---Select---</option>		
+												<option value="1222">Banaras Locomotive Works</option>
+<option value="45221">COFMOW</option>
+<option value="31381">CORE</option>
+<option value="561">Central Railway</option>
+<option value="6721">Chittaranjan Locomotive Works</option>
+<option value="6806">East Central Railway</option>
+<option value="3482">East Coast Railway</option>
+<option value="8937">Eastern Railway</option>
+<option value="1041033">IREPS TESTING2</option>
+<option value="301">IREPS-TESTING</option>
+<option value="84841">IRICEN</option>
+<option value="122041">IRIEEN</option>
+<option value="1001683">IRIFM</option>
+<option value="112821">IRIMEE</option>
+<option value="148086">IRISET</option>
+<option value="120714">IRITM</option>
+<option value="133061">IROAF</option>
+<option value="641">Integral Coach Factory</option>
+<option value="1016777">JRRPFA</option>
+<option value="31528">Metro</option>
+<option value="20281">Modern Coach Factory, Raebareli</option>
+<option value="11341">NFR Construction</option>
+<option value="105322">National Academy of Indian Railways</option>
+<option value="541">North Central Railway</option>
+<option value="4527">North East Frontier Railway</option>
+<option value="4702">North Eastern Railway</option>
+<option value="4494">North Western Railway</option>
+<option value="401">Northern Railway</option>
+<option value="831">Patiala Locomotive Works</option>
+<option value="20504">RDSO</option>
+<option value="501">Rail Coach Factory, Kapurthala</option>
+<option value="1233">Rail Wheel Factory</option>
+<option value="43901">Rail Wheel Plant, Bela</option>
+<option value="2261">Railway Board</option>
+<option value="562">South Central Railway</option>
+<option value="1140989">South Coast Railway</option>
+<option value="581">South East Central Railway</option>
+<option value="5261">South Eastern Railway</option>
+<option value="4495">South Western Railway</option>
+<option value="582">Southern Railway</option>
+<option value="601">West Central Railway</option>
+<option value="483">Western Railway</option>
+<option value="75781">Workshop Projects Organization</option>
+
+												<option value="-1">All</option></select>						
+											</td>
+																
+											<td class="formLabel">Department<font color="#C00000"> * </font></td>
+											<td>	
+																									
+											<select name="division" onchange="return returnUnit(); " style="width:200px;" class="comboStyle" id="division"><option value="-1" selected="selected">All</option>	
+												<option value="01">Accounts</option>
+<option value="02">Administration</option>
+<option value="52">Audit</option>
+<option value="03">Commercial</option>
+<option value="04">Electrical</option>
+<option value="21">EnHM</option>
+<option value="05">Engineering</option>
+<option value="81">Gati Shakti</option>
+<option value="70">General</option>
+<option value="99">Information Tech.</option>
+<option value="06">Mechanical</option>
+<option value="07">Medical</option>
+<option value="08">Operating</option>
+<option value="09">Personnel</option>
+<option value="22">Planning</option>
+<option value="18">S AND T</option>
+<option value="10">Safety</option>
+<option value="11">Security</option>
+<option value="19">Stores</option>
+<option value="51">Vigilance</option></select>
+											</td>
+											
+										</tr>
+					
+										<tr height="40px;"> 
+						<td class="formLabel">Unit</td>
+											<td>
+																				
+											<select name="unit" onchange="return returnsection()" style="width:260px;" class="comboStyle" id="unit"><option value="-1" selected="selected">All</option></select>
+											</td>
+											
+											
+										</tr>
+
+								
+					<tr height="40px;">
+						<td class="formLabel">Tender Status: </td>
+						<td> 
+						<select name="tenderStage" style="width:260px;" class="comboStyle" id="tenderStage"><option value="-1" selected="selected">All</option>	
+							<option value="1">Published</option>
+							<option value="2">Tender Box Open</option>
+							<option value="3">Under Evaluation</option>
+							<option value="4">PO Placed</option>
+							<option value="5">Cancelled</option>
+							<option value="7">Dropped</option>
+							<option value="8">Tender Box Opened-Tabulation Pending</option>
+							<option value="9">Retendered</option>
+							<option value="20">TABULATION PENDING</option></select>
+						</td>
+                     <!--   <input type="hidden" property="tenderStageLabel" name ="tenderStageLabel" id="tenderStageLabel"> -->
+						<td class="formLabel">Tender Type:</td>
+						<td>
+						
+						<select name="tenderType" style="width:200px;" class="comboStyle" id="tenderType"><option value="-1" selected="selected">All</option>	
+							<option value="1">Limited</option>
+							<option value="2">Open</option>
+							<option value="3">Special Limited</option>
+							<option value="5">Single</option></select>
+						</td>
+						<!--  <input type="hidden" property="tenderTypeLabel" name ="tenderTypeLabel" id="tenderTypeLabel"> -->
+				   </tr>
+				
+						<tr height="40px;">
+						<td class="formLabel">Bidding System</td>
+						<td><select name="bidding" style="width:260px;" class="comboStyle" id="bidding"><option value="-1" selected="selected">All</option>	
+							<option value="0">Single Packet</option>
+							<option value="1">Two Packet</option></select>		
+						</td>
+					</tr>
+					</table>
+					
+					
+					</td> 
+					</tr>
+				<tr id="searchPeriodBlock" style="display: none">                   
+					<td colspan=4>
+					<table width="100%" border="0"> 	
+						<tr>
+					  
+							<tr height="40px;">				
+							 <td class="formLabel" style="width:140px;">Select Date</td>
+						 <td><select name="selectDate" class="comboStyle"><option value="TENDER_OPENING_DATE">Tender Closing Date</option>
+							<option value="TENDER_PUBLISHING_DATE">Tender Uploading Date</option></select>
+						
+						 
+						 </td> 
+						
+						 <td class="formLabel" colspan="3">
+						 		<table>
+						 		   <tr>
+						 		      <td class="formLabel">From&nbsp;</td>
+						 		      
+						 		      <td>
+						 		      
+							 		      <td><input type="text" name="dateFrom" size="12" value="09/07/2026" readonly="readonly" id="ddmmyyDateformat1">
+							 		      <a href="javascript:NewCal('ddmmyyDateformat1','ddmmyyyy',false);" id="dateImgFrom"> 
+								   			<img src="/ireps/images/common/cal.gif" width="16" height="16" border="0" alt="Pick a date"></a> </td>
+							   		
+							   <td> 
+							   <a href="javascript:copyDate('ddmmyyDateformat1');" title="Copy from [From date] to [To date]."> 
+							   <img src="/ireps/images/Forward.png" width="16" height="16" border="0" alt="Forward date"></a>
+							   </td>
+							   			<td>&nbsp; &nbsp; &nbsp;</td>	
+							   	<td>
+							   	<a href="javascript:copyDate('ddmmyyDateformat2');" title="Copy from [To date] to [From date]."> 
+							   <img src="/ireps/images/Previous.png" width="16" height="16" border="0" alt="Reverse date"></a>
+							   </td>
+							   			<td class="formLabel">To&nbsp;</td>
+						 		      <td><input type="text" name="dateTo" size="12" value="09/07/2026" readonly="readonly" id="ddmmyyDateformat2"></td>
+						 		      <td><a href="javascript:NewCal('ddmmyyDateformat2','ddmmyyyy')" id="dateImgTo"><img src="/ireps/images/common/cal.gif" width="16" height="16" border="0" alt="Pick a date"></a></td>
+						 		   <td>&nbsp; &nbsp; &nbsp;</td>
+						 		   <td>&nbsp;
+						 		   <select name="direction" class="comboStyle" id="direction"><option value="P">Previous</option>
+										<option value="L">Later</option></select>
+						 		   </td>
+						 		   <td>&nbsp; <input type="number" id="noMonthDay" name="noMonthDay" value="" maxlength="3" size="3" style="width: 50px;"> </td>
+						 		   <td>&nbsp;
+						 		   
+						 		   <select name="monthDay" class="comboStyle" id="monthDay"><option value="M">Month(s)</option>
+										<option value="D">Day(s)</option></select>
+						 		    </td>
+						 		   <td>&nbsp; &nbsp; &nbsp;</td>
+						 		   <td>&nbsp;<input type="button" onclick="changDate();" value=" Apply "> </td>
+						 		  </tr>
+						 		</table>
+						 </td>
+							</tr>
+							
+						 	<tr >
+								   <td id="last6" class="formLabel" ><input type="radio" name="radioDuration" value="-6" onclick="dateManupilation();" id="rdLast6M">&nbsp;&nbsp;Last 6 months</td>
+								   <td id="last3" class="formLabel"><input type="radio" name="radioDuration" value="-3" onclick="dateManupilation();" id="rdLast3M">&nbsp;&nbsp;Last 3 months</td>
+								   <td id="next3" class="formLabel"><input type="radio" name="radioDuration" value="3" onclick="dateManupilation();" id="rdNext3M">&nbsp;&nbsp;Next 3 months</td>
+								   <td id="next6" class="formLabel"><input type="radio" name="radioDuration" value="6" onclick="dateManupilation();" id="rdNext6M">&nbsp;&nbsp;Next 6 months</td>
+								   <td id="custom" class="formLabel"><input type="radio" name="radioDuration" value="0" checked="checked" onclick="dateManupilation();" id="rdCusDate">&nbsp;&nbsp;Custom Date</td>
+								   <script type="text/javascript">
+								 			hideDateType();
+									</script> 
+							</tr> 
+																			
+							<tr height="20px;">
+								 <td align="left" COLSPAN=4><div style="display: block" id="dateRangeDiv"><font color="brown"><br>&nbsp;*Date range should be within one year</font></div></td> 
+							</tr>
+							
+								
+					
+					</table>
+				
+				
+					</td>
+					</tr>
+						
+					 <tr id="searchButtonBlock" style="display: none"> 
+						  <td align="center" COLSPAN=4>    
+							  <input type="submit" name="submit" tabindex="7" value="Show Results" onclick="return editSearch();" class="buttonStyle">
+							  <input type="hidden" name="searchParam" id="searchParam">
+							 
+						  </td>
+						
+					 </tr>
+						 <tr id="searchButtonBlockBeta" style="display: none"> 
+						  <td align="center" COLSPAN=4>   
+							  <input type="submit" name="submit" tabindex="7" value="Show Results" onclick="return editSearch();" class="buttonStyle">
+							  <input type="hidden" name="activity" id="activity">
+							  <!-- <input type="hidden" name="searchParam" id="searchParam"> -->
+							 
+							 
+						  </td>
+						
+					 </tr>
+					  	
+					
+					 <tr>
+						<td COLSPAN=4>
+						
+						<table width="100%" border="0" cellspacing="0" cellpadding="2">
+						
+						
+					 
+				</table>
+				 
+			</td>
+		</tr> 
+		    
+		    <tr id="custmSrchBetaRowId" style="display: none; ">
+		    		
+                    				</tbody>
+					</table>
+				</td>
+			</tr>
+			
+            
+							<tr>
+							<td align="right" colspan="4">
+								
+							
+						
+                        
+                        
+						
+						
+						
+												
+						<tr><td colspan=4 align="right"></td></tr>
+					
+					</td></tr>			
+					</table>
+				</form>
+				</td></tr>
+				</table>
+						  
+				</td></tr>
+				<tr><td height="20" valign="top">
+				<table width="100%" border="0" cellpadding="0" cellspacing="0" class="titleBottom">
+				<tr><td width="2.3%" height="19" valign="top"><div id="botLeft"></div></td>
+				<td width="80%">&nbsp;</td>
+				<td width="2.3%" valign="top"><div id="botRight"></div></td>
+				</tr></table>				
+			</td></tr>
+			</table></div>
+		</td>
+		<td>&nbsp;</td>
+		</tr>
+		</table> 
+	
+
+<script>document.forms[0].bidding.value = "-1";</script>
+
+<script type="text/javascript">
+var encodedURLForSubmit='/epsn/anonymSearch.do';
+var encodedURLForGetUnit='/epsn/jsp/rfq/Search/getUnitLists.jsp?department=';
+var encodedURLForSection='/epsn/jsp/rfq/Search/getSectionsList.jsp?unitId=';
+var encodedURLForOrgZone='/epsn/jsp/rfq/Search/getOrgZonesList.jsp?organization=';
+var encodedURLForDepartment='/epsn/jsp/rfq/Search/getDepartmentLists.jsp?organization=';
+var useracctName = '';
+var deptId = '0';
+var userType = '';
+var urlParam ='null';	
+var serachParam = '';
+document.getElementById("searchParam").value=serachParam;
+
+
+if(serachParam == "" || serachParam == "custumSearch") {
+document.getElementById("searchCritBlock").style.display = "";
+document.getElementById("searchInBlock").style.display = "";
+document.getElementById("searchPeriodBlock").style.display = "";
+document.getElementById("searchButtonBlock").style.display = "";
+document.getElementById("custumSearchId").style.backgroundColor = "#D75125";
+document.getElementById("custumSearchId").style.color="white";
+document.getElementById("custumSearchBetaId").style.backgroundColor = "";
+document.getElementById("custumSearchBetaId").style.color="";
+document.getElementById("activeTenderId").style.backgroundColor = "";
+document.getElementById("activeAuctionId").style.backgroundColor = "";
+document.getElementById("closedAuctionId").style.backgroundColor = "";
+document.getElementById("openTodayId").style.backgroundColor = "";
+document.getElementById("closedTenderId").style.backgroundColor = "";
+
+}
+else if(serachParam == "showPageClosed")
+{
+	
+	document.getElementById("openTodayId").style.backgroundColor = "#D75125";
+	document.getElementById("openTodayId").style.color="white";
+	document.getElementById("custumSearchId").style.backgroundColor = "";
+	document.getElementById("custumSearchBetaId").style.backgroundColor = "";
+	document.getElementById("activeTenderId").style.backgroundColor = "";
+	document.getElementById("closedTenderId").style.backgroundColor = "";
+	document.getElementById("activeAuctionId").style.backgroundColor = "";
+	document.getElementById("closedAuctionId").style.backgroundColor = "";
+	
+}
+else if(serachParam == "showPageLive")
+{
+	document.getElementById("activeTenderId").style.backgroundColor = "#D75125";
+	document.getElementById("activeTenderId").style.color="white";
+	document.getElementById("openTodayId").style.backgroundColor = "";
+	document.getElementById("custumSearchId").style.backgroundColor = "";
+	document.getElementById("custumSearchBetaId").style.backgroundColor = "";
+	document.getElementById("closedTenderId").style.backgroundColor = "";
+	document.getElementById("activeAuctionId").style.backgroundColor = "";
+	document.getElementById("closedAuctionId").style.backgroundColor = "";
+	
+
+}
+else if(serachParam == "closedTender")
+{
+	document.getElementById("closedTenderId").style.backgroundColor = "#D75125";
+	document.getElementById("closedTenderId").style.color="white";
+	document.getElementById("openTodayId").style.backgroundColor = "";
+	document.getElementById("custumSearchId").style.backgroundColor = "";
+	document.getElementById("custumSearchBetaId").style.backgroundColor = "";
+	document.getElementById("activeTenderId").style.backgroundColor = "";
+	document.getElementById("activeAuctionId").style.backgroundColor = "";
+	document.getElementById("closedAuctionId").style.backgroundColor = "";
+	
+
+}
+else if(serachParam == "showPageLiveAuction")
+{
+	document.getElementById("activeAuctionId").style.backgroundColor = "#D75125";
+	document.getElementById("activeAuctionId").style.color="white";
+	document.getElementById("openTodayId").style.backgroundColor = "";
+	document.getElementById("custumSearchId").style.backgroundColor = "";
+	document.getElementById("custumSearchBetaId").style.backgroundColor = "";
+	document.getElementById("activeTenderId").style.backgroundColor = "";
+	document.getElementById("closedTenderId").style.backgroundColor = "";
+	
+
+}
+else if(serachParam == "showPageClosedAuction")
+{
+	document.getElementById("closedAuctionId").style.backgroundColor = "#D75125";
+	document.getElementById("closedAuctionId").style.color="white";
+	document.getElementById("activeAuctionId").style.backgroundColor="";
+	document.getElementById("openTodayId").style.backgroundColor = "";
+	document.getElementById("custumSearchId").style.backgroundColor = "";
+	document.getElementById("custumSearchBetaId").style.backgroundColor = "";
+	document.getElementById("activeTenderId").style.backgroundColor = "";
+	document.getElementById("closedTenderId").style.backgroundColor = "";
+	
+
+}
+else if(serachParam == "custumSearchBeta")
+{
+	document.getElementById("custumSearchBetaId").style.backgroundColor = "#D75125";
+	document.getElementById("custumSearchBetaId").style.color="white";
+	document.getElementById("custmSrchBetaRowId").style.display = "";
+	document.getElementById("searchCritBlock").style.display = "";
+	document.getElementById("searchInBlock").style.display = "";
+	document.getElementById("searchPeriodBlock").style.display = "";
+	document.getElementById("searchButtonBlockBeta").style.display = "";
+	document.getElementById("custumSearchId").style.backgroundColor = "";
+	document.getElementById("custumSearchId").style.color="";
+	document.getElementById("activeTenderId").style.backgroundColor = "";
+	document.getElementById("activeAuctionId").style.backgroundColor = "";
+	document.getElementById("closedAuctionId").style.backgroundColor = "";
+	document.getElementById("openTodayId").style.backgroundColor = "";
+	document.getElementById("closedTenderId").style.backgroundColor = "";
+	
+
+}
+function copyDate(dateId){
+	if(dateId=='ddmmyyDateformat1'){
+		$("#ddmmyyDateformat2").val($("#ddmmyyDateformat1").val());
+	}else{
+		$("#ddmmyyDateformat1").val($("#ddmmyyDateformat2").val());
+	}
+	
+}
+
+function changDate(){
+	var monthDay = $("#monthDay").val();
+	var direction = $("#direction").val();
+	var noMonthDay = $("#noMonthDay").val();
+	var ddmmyyDateformat1 = $("#ddmmyyDateformat1").val();
+	var ddmmyyDateformat2 = $("#ddmmyyDateformat2").val();
+	var noOfMonthDay = parseInt(noMonthDay, 10);;
+	if(noMonthDay==''){
+		alert("Please enter number.");
+		idFocus($("#noMonthDay"));
+		return false;
+	}
+	if(direction=='P'){
+		 noOfMonthDay = -1* noMonthDay;
+	}
+	if(monthDay=='M'){
+		
+		var dt1 = modifyMonths(ddmmyyDateformat1, noOfMonthDay);
+		var dt2 = modifyMonths(ddmmyyDateformat2, noOfMonthDay);
+		$("#ddmmyyDateformat1").val(dt1);
+		$("#ddmmyyDateformat2").val(dt2);
+		
+	}else if(monthDay=='D'){
+		var dt1 = modifyDays(ddmmyyDateformat1, noOfMonthDay);
+		var dt2 = modifyDays(ddmmyyDateformat2, noOfMonthDay);
+		$("#ddmmyyDateformat1").val(dt1);
+		$("#ddmmyyDateformat2").val(dt2);
+	}
+	
+}
+function idFocus(el) {
+	if (!el)
+		return false;
+	el.focus();
+	el.addClass("errClass");
+	setInterval(function() {
+		el.removeClass("errClass");
+	}, 2500);
+	return true;
+}
+function modifyDays(dateStr, days) {
+    var parts = dateStr.split('/');
+    var day = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var year = parseInt(parts[2], 10);
+
+    var date = new Date(year, month - 1, day); // Months are 0-indexed in JavaScript Date
+    date.setDate(date.getDate() + days);
+
+    var newDay = String(date.getDate()).padStart(2, '0');
+    var newMonth = String(date.getMonth() + 1).padStart(2, '0');
+    var newYear = date.getFullYear();
+
+    return newDay + '/' + newMonth + '/' + newYear;
+}
+
+function modifyMonths(dateStr, months) {
+    var parts = dateStr.split('/');
+    var day = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var year = parseInt(parts[2], 10);
+
+    var date = new Date(year, month - 1, day);
+    var originalDay = date.getDate();
+    
+    date.setMonth(date.getMonth() + months);
+
+    // Handling month overflow 
+    if (date.getDate() !== originalDay) {
+        date.setDate(0); // Last day of the previous month
+    }
+
+    var newDay = String(date.getDate()).padStart(2, '0');
+    var newMonth = String(date.getMonth() + 1).padStart(2, '0');
+    var newYear = date.getFullYear();
+
+    return newDay + '/' + newMonth + '/' + newYear;
+}
+
+</script>
+
+
+	</td>
+    <td width="15%" valign="top" >
+		
+	</td>
+  </tr>
+  <tr> 
+    <td height="30" colspan="3" width="100%">
+		
+
+
+<link rel="stylesheet" type="text/css" href="/ireps/css/menuStyle.css">
+<script type="text/javascript" src="/ireps/js/common/a076d05399.js"></script>
+<style>
+.topStrip1{
+   background: #07222E;
+	font-family: 'Adobe Garamond Pro', sans-serif;
+    width: 100%;
+    height: 30px;
+ }
+
+ .link-item {
+        color: white; /* Default text color */
+        transition: color 0.3s ease; /* Smooth transition for color change */
+ }
+
+ .link-item:hover {
+        color: cyan; /* Color change on hover */
+        text-decoration: none; /* Optional: Remove underline on hover */
+}
+
+</style>
+
+	 <table width="100%" border="0" cellpadding="0" cellspacing="0" class="topStrip1">
+	   <tr>
+			<td width="20%" height="20px;"  valign="middle" style="padding:2px; padding-bottom:0px;">
+				<!-- <A HREF="https://sealinfo.verisign.com/splash?form_file=fdf/splash.fdf&dn=www.ireps.gov.in&lang=en" target="_blank" rel="noopener noreferrer"><IMG SRC="/ireps/images/common/verisign.jpg" BORDER="0"></A> --> 
+				<A HREF="http://cris.org.in/" target="_blank" rel="noopener noreferrer"><font color="white">Developed by CRIS</A>&nbsp;&nbsp;Mem02</font>
+			</td>	
+			<td width="80%" height="20px;" style="color: white;">
+    <div align="right">
+        <a href="/ireps/upload/resources/AboutUs.pdf" target="_blank" rel="noopener noreferrer" class="link-item"><font color="white">About IREPS</font></a> |
+        <a href="/ireps/upload/resources/Disclamier_en.pdf" target="_blank" rel="noopener noreferrer" class="link-item"><font color="white">Disclaimer</font></a> |
+        <a href="/ireps/upload/resources/PrivacyPolicy.pdf" target="_blank" rel="noopener noreferrer" class="link-item"><font color="white">Privacy Statement</font></a> |
+        <a href="http://rti.railnet.gov.in/" target="_blank" rel="noopener noreferrer" class="link-item"><font color="white">RTI </font></a> |
+        <a href="/ireps/upload/resources/TermsAndCondition.pdf" target="_blank" rel="noopener noreferrer" class="link-item"><font color="white">Terms & Conditions</font></a> |
+        <a href="/ireps/upload/resources/Copyright.pdf" target="_blank" rel="noopener noreferrer" class="link-item"><font color="white">CopyRight </font></a> 
+         &nbsp;&nbsp;&nbsp;
+    </div>
+</td>
+		</tr>	 
+    </table>
+    
+
+    
+	</td>
+  </tr>
+</table>
+</body>
+</html>

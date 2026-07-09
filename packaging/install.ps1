@@ -40,7 +40,8 @@ $installRoot = Join-Path $env:ProgramFiles 'TenderAgent'
 $dataRoot = Join-Path $env:ProgramData 'TenderAgent'
 $watchedRoot = Join-Path $env:PUBLIC 'Documents\Tender Uploads'
 $publicDesktop = Join-Path $env:PUBLIC 'Desktop'
-$shortcutPath = Join-Path $publicDesktop 'Upload Tender Documents.lnk'
+$uploadShortcutPath = Join-Path $publicDesktop 'Upload Tender Documents.lnk'
+$managerShortcutPath = Join-Path $publicDesktop 'Manage Tender Downloads.lnk'
 
 New-Item -ItemType Directory -Path $installRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $dataRoot -Force | Out-Null
@@ -106,7 +107,7 @@ if (Test-Path $pngPath) {
 }
 
 $shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut($shortcutPath)
+$shortcut = $shell.CreateShortcut($uploadShortcutPath)
 $shortcut.TargetPath = $watchedRoot
 $shortcut.WorkingDirectory = $watchedRoot
 $shortcut.Description = 'Drop tender documents here for automatic upload.'
@@ -114,6 +115,24 @@ if (Test-Path $iconPath) {
   $shortcut.IconLocation = $iconPath
 }
 $shortcut.Save()
+
+$managerAppRoot = Join-Path $installRoot 'manager-app'
+$managerElectron = Join-Path $managerAppRoot `
+  'node_modules\electron\dist\electron.exe'
+
+if (Test-Path $managerElectron) {
+  $managerShortcut = $shell.CreateShortcut($managerShortcutPath)
+  $managerShortcut.TargetPath = $managerElectron
+  $managerShortcut.Arguments = "`"$managerAppRoot`""
+  $managerShortcut.WorkingDirectory = $managerAppRoot
+  $managerShortcut.Description = 'Open the IREPS tender download manager.'
+  if (Test-Path $iconPath) {
+    $managerShortcut.IconLocation = $iconPath
+  }
+  $managerShortcut.Save()
+} else {
+  Write-Warning 'Manager app Electron runtime was not found; manager desktop shortcut was not created.'
+}
 
 & $serviceExecutable install
 if ($LASTEXITCODE -ne 0) {
@@ -128,4 +147,5 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host 'Tender Agent installed successfully.'
 Write-Host "Agent ID: $AgentId"
 Write-Host "Upload folder: $watchedRoot"
+Write-Host "Manager shortcut: $managerShortcutPath"
 Write-Host "Logs: $(Join-Path $dataRoot 'logs')"

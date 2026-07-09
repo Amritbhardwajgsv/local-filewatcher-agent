@@ -64,6 +64,14 @@ try {
     Copy-Item -LiteralPath $iconSource -Destination $stagingRoot
   }
 
+  $managerAppSource = Join-Path $repositoryRoot 'manager-app'
+  if (Test-Path $managerAppSource) {
+    Copy-Item -LiteralPath $managerAppSource `
+      -Destination (Join-Path $stagingRoot 'manager-app') -Recurse
+  } else {
+    Write-Warning 'manager-app folder was not found; desktop manager shortcut will not be packaged.'
+  }
+
   if (Test-Path $archivePath) {
     Remove-Item -LiteralPath $archivePath -Force
   }

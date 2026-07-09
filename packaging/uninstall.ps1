@@ -18,16 +18,22 @@ if (-not $isAdministrator) {
 $installRoot = Join-Path $env:ProgramFiles 'TenderAgent'
 $dataRoot = Join-Path $env:ProgramData 'TenderAgent'
 $serviceExecutable = Join-Path $installRoot 'TenderAgentService.exe'
-$shortcutPath = Join-Path $env:PUBLIC `
+$uploadShortcutPath = Join-Path $env:PUBLIC `
   'Desktop\Upload Tender Documents.lnk'
+$managerShortcutPath = Join-Path $env:PUBLIC `
+  'Desktop\Manage Tender Downloads.lnk'
 
 if (Test-Path $serviceExecutable) {
   & $serviceExecutable stop 2>$null
   & $serviceExecutable uninstall 2>$null
 }
 
-if (Test-Path $shortcutPath) {
-  Remove-Item -LiteralPath $shortcutPath -Force
+if (Test-Path $uploadShortcutPath) {
+  Remove-Item -LiteralPath $uploadShortcutPath -Force
+}
+
+if (Test-Path $managerShortcutPath) {
+  Remove-Item -LiteralPath $managerShortcutPath -Force
 }
 
 if (Test-Path $installRoot) {

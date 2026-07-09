@@ -71,6 +71,8 @@ packaging/
   TenderAgentService.xml
   config.production.yaml
 
+manager-app/           Desktop IREPS tender download manager
+
 tests/                 Vitest test suite
 ```
 
@@ -226,6 +228,7 @@ The ZIP contains:
 - Compiled JavaScript
 - Node.js x64 runtime
 - Production dependencies and native `better-sqlite3`
+- Desktop manager app and bundled Electron runtime
 - WinSW Windows service wrapper
 - Install and uninstall scripts
 - Production configuration template
@@ -276,6 +279,7 @@ It also:
 - Configures service restart after failures.
 - Protects the machine `.env` for SYSTEM and Administrators.
 - Creates a public desktop shortcut named **Upload Tender Documents**.
+- Creates a public desktop shortcut named **Manage Tender Downloads**.
 
 ## Verify An Installation
 

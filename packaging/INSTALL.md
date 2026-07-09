@@ -20,7 +20,8 @@ C:\Users\Public\Documents\Tender Uploads
 ```
 
 It also registers the automatic `Tender Agent` Windows service and creates
-the public desktop shortcut `Upload Tender Documents`.
+the public desktop shortcuts `Upload Tender Documents` and
+`Manage Tender Downloads`.
 
 To uninstall while preserving the queue, configuration, and logs:
 
