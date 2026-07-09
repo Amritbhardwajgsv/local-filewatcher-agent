@@ -59,6 +59,11 @@ try {
   Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'INSTALL.md') `
     -Destination $stagingRoot
 
+  $iconSource = Join-Path $repositoryRoot 'tender_automation_agent_icon.png'
+  if (Test-Path $iconSource) {
+    Copy-Item -LiteralPath $iconSource -Destination $stagingRoot
+  }
+
   if (Test-Path $archivePath) {
     Remove-Item -LiteralPath $archivePath -Force
   }

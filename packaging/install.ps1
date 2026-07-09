@@ -89,11 +89,30 @@ Set-Content -LiteralPath $envPath -Value $envContent -Encoding ASCII
 & icacls.exe $envPath /inheritance:r /grant:r `
   '*S-1-5-18:(F)' '*S-1-5-32-544:(F)' | Out-Null
 
+$iconPath = Join-Path $installRoot 'tender_automation_agent_icon.ico'
+$pngPath  = Join-Path $installRoot 'tender_automation_agent_icon.png'
+
+if (Test-Path $pngPath) {
+  Add-Type -AssemblyName System.Drawing
+  $png  = [System.Drawing.Image]::FromFile($pngPath)
+  $bmp  = New-Object System.Drawing.Bitmap($png)
+  $icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
+  $stream = [System.IO.File]::OpenWrite($iconPath)
+  $icon.Save($stream)
+  $stream.Close()
+  $icon.Dispose()
+  $bmp.Dispose()
+  $png.Dispose()
+}
+
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = $watchedRoot
 $shortcut.WorkingDirectory = $watchedRoot
 $shortcut.Description = 'Drop tender documents here for automatic upload.'
+if (Test-Path $iconPath) {
+  $shortcut.IconLocation = $iconPath
+}
 $shortcut.Save()
 
 & $serviceExecutable install
